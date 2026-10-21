@@ -238,8 +238,8 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 
  <!-- appearance 1 : head > bunches > body > neck -->
  <g id="A1">
-  <!-- neck narrowed to match the beauty.png reference: x' = 645 + 0.7(x - 1081) -->
-  <g id="neckG1"><g id="neck1"><image href="assets/neck1.png" x="892" y="762" width="378" height="508" transform="translate(645 -206) scale(0.7 1) translate(-1081 0)"/></g></g>
+  <!-- neck narrowed and raised to match the beauty.png reference: x' = 645 + 0.7(x - 1081), y' = y - 320 (so it widens toward the collar) -->
+  <g id="neckG1"><g id="neck1"><image href="assets/neck1.png" x="892" y="762" width="378" height="508" transform="translate(645 -320) scale(0.7 1) translate(-1081 0)"/></g></g>
   <g id="stump1" visibility="hidden" transform="translate(645 0) scale(0.7 1) translate(-646 0)">
     <path d="M590 702 L605 686 L622 704 L640 684 L658 706 L676 688 L694 705 L712 690 L730 702 L716 716 L600 716Z" fill="#0b0707" stroke="#141414" stroke-width="5"/>
     <path class="cable" d="M615 698 C 600 650, 640 640, 628 600" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
@@ -260,7 +260,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
     <g clip-path="url(#cp1L)"><image id="p1L" href="assets/head1_pupil0.png" x="539" y="467" width="25" height="69"/></g>
     <g clip-path="url(#cp1R)"><image id="p1R" href="assets/head1_pupil1.png" x="713" y="465" width="23" height="75"/></g>
    </g>
-   <image id="mouth1" href="assets/head1_mouth.png" x="584" y="598" width="96" height="58"/>
+   <image id="mouth1" href="assets/head1_mouth.png" x="592" y="605" width="80" height="46"/>
    <image id="blink1" href="assets/blink1.png" x="490" y="436" width="290" height="126" visibility="hidden"/>
    <g id="sockets1" visibility="hidden">
      <ellipse cx="554" cy="503" rx="19" ry="38" fill="url(#socket)"/>
@@ -366,7 +366,7 @@ const sfx={
 const charBox=$('charTpl').content.firstElementChild.cloneNode(true);
 const E={};['A1','A2','headG1','headG2','bodyG1','bodyG2','neckG1','neckG2','neck1','neck2','tailL1','tailR1','head1','p1L','p1R','p2L','p2R','mouth1','mouth2','blink1','blink2','eyes1','eyes2','stump1','stump2','torn1','torn2','sockets1','sockets2','eyeballs','cordL','cordR','ballL','ballR','ballLp','ballRp','charSvg'].forEach(k=>E[k]=charBox.querySelector('#'+k));
 const APP={
- 1:{pivot:[645,700],eye:[640,502],look:[6,5],pupils:['p1L','p1R'],mouth:'mouth1',mtop:598,sock:[[554,503],[725,502]],stump:[660,700],pup:['assets/head1_pupil0.png','assets/head1_pupil1.png']},
+ 1:{pivot:[645,700],eye:[640,502],look:[6,5],pupils:['p1L','p1R'],mouth:'mouth1',mtop:605,sock:[[554,503],[725,502]],stump:[660,700],pup:['assets/head1_pupil0.png','assets/head1_pupil1.png']},
  2:{pivot:[720,705],eye:[617,540],look:[7,6],pupils:['p2L','p2R'],mouth:'mouth2',mtop:647,sock:[[547,550],[687,530]],stump:[752,712],pup:['assets/head2_pupil0.png','assets/head2_pupil1.png']}
 };
 const C={app:1,mode:'pre',look:{x:0,y:0},lookT:{x:0,y:0},talk:false,smile:false,blink:false,blinkAt:2.5,

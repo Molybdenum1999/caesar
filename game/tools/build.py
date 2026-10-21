@@ -60,9 +60,16 @@ def head_parts(src,name,pupils,mouthbox,extra=None):
     # mouth sprite (dark + interior white), head gets mouth whited
     x0,y0,x1,y1=mouthbox
     sub=a[y0:y1,x0:x1].copy()
-    dm=dark(sub)
+    # only strokes lying wholly inside the mouth box (keeps the jawline on the head)
+    lab2,_=ndimage.label(dark(a))
+    keep=set()
+    for k in set(np.unique(lab2[y0:y1,x0:x1]))-{0}:
+        ys,xs=np.where(lab2==k)
+        if xs.min()>=x0 and xs.max()<x1 and ys.min()>=y0 and ys.max()<y1: keep.add(k)
+    dm=np.isin(lab2[y0:y1,x0:x1],list(keep))
     sp=np.zeros_like(a); sp[y0:y1,x0:x1]=sub; 
     sp[y0:y1,x0:x1][~dm]=[255,255,255,255]
+    sp[y0:y1,x0:x1][dm]=sub[dm]
     # make outside-of-mouth white transparent-ish: keep only filled shape of dark strokes
     shape=ndimage.binary_fill_holes(ndimage.binary_closing(dm,iterations=3))|dm
     tmp=sp[y0:y1,x0:x1]; tmp[~shape]=0
