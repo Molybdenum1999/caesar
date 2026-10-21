@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Caesar: Recall</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Nanum+Pen+Script&family=Special+Elite&family=Courier+Prime:ital@0;1&family=DotGothic16&display=swap">
+<style>
+/* Layout: one fixed 3200x2000 "monitor" stage drawn in the artist's pen-and-ink frames, scaled to fit the window.
+   Deliberately single-look (grey desktop, white paper, black ink), so no dark-theme variant. */
+:root{
+  --void:#0e0e10;      /* letterbox around the monitor */
+  --paper:#ffffff;     /* window & chat paper */
+  --ink:#141414;       /* pen line */
+  --graphite:#6b6b6e;  /* secondary pencil text */
+  --dim:rgba(6,6,8,.66);
+  --oil:#0b0707;       /* what Caesar bleeds */
+  --hand:'Architects Daughter','Comic Sans MS','Segoe Print',cursive;
+  --diary:'Nanum Pen Script','Segoe Print','Bradley Hand',cursive;
+  --print:'Special Elite','Courier New',monospace;
+  --type:'Courier Prime','Courier New',monospace;
+  --sys:'DotGothic16','Courier New',monospace;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--void);color:var(--ink);overflow:hidden;font-family:var(--hand);
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px));
+  -webkit-user-select:none;user-select:none;touch-action:none}
+#viewport{position:fixed;inset:0;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:3200px;height:2000px;transform-origin:0 0;overflow:hidden;background:#555}
+#shake{position:absolute;inset:0}
+.abs{position:absolute}
+.layer{position:absolute;inset:0}
+.layer[hidden]{display:none!important}
+.bg{position:absolute;inset:0;width:3200px;height:2000px;max-width:none}
+img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-drag:none}
+
+/* ---------- login ---------- */
+#login .bg{filter:brightness(.82)}
+#loginFrame{transition:transform .2s}
+#loginFrame.shake{animation:nudge .35s}
+@keyframes nudge{20%{transform:translateX(-14px) rotate(-.4deg)}50%{transform:translateX(12px)}80%{transform:translateX(-6px)}}
+#loginBox{left:985px;top:1192px;width:1100px;height:160px}
+#nameInput{position:absolute;left:1005px;top:1200px;width:1060px;height:144px;border:0;outline:0;background:transparent;
+  font-family:var(--hand);font-size:92px;color:var(--ink);text-align:center;letter-spacing:.06em;padding:0 40px;caret-color:var(--ink)}
+#nameInput::placeholder{color:#b9b9bc;font-size:66px;letter-spacing:.08em}
+#nameInput:focus-visible{outline:none}
+#enterBtn{position:absolute;left:1405px;top:1384px;width:260px;height:96px;border:0;background:transparent;cursor:pointer;padding:0;
+  font-family:var(--hand);font-size:56px;color:var(--ink);letter-spacing:.12em;transition:transform .15s}
+#enterBtn svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#enterBtn span{position:relative}
+#enterBtn:hover,#enterBtn:focus-visible{transform:scale(1.07) rotate(-1deg);outline:none}
+#enterBtn:disabled{opacity:.35;cursor:default;transform:none}
+#loginX{position:absolute;left:722px;top:322px;width:110px;height:110px;cursor:pointer;background:transparent;border:0}
+#loading{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--hand);font-size:90px;color:#ddd;background:#333;z-index:99}
+
+/* ---------- character ---------- */
+#charBox{position:absolute;overflow:hidden;pointer-events:none}
+#charSvg{position:absolute;left:0;top:0;width:3200px;height:2000px;overflow:visible;transform-origin:0 0}
+#charBox.glitch #charSvg{filter:drop-shadow(14px 0 0 rgba(255,0,70,.75)) drop-shadow(-14px 0 0 rgba(0,240,255,.75))}
+#charBox.spot{z-index:40;filter:drop-shadow(0 0 28px rgba(255,255,255,.9))}
+#charBox.glow{animation:glow 1s ease-out}
+@keyframes glow{0%{filter:brightness(2.2) drop-shadow(0 0 60px #fff)}100%{filter:drop-shadow(0 0 28px rgba(255,255,255,.9))}}
+
+/* ---------- prechat ---------- */
+#chatLog{position:absolute;left:1795px;top:480px;width:890px;height:1120px;overflow:hidden;font-size:88px;line-height:1.38}
+#chatLog p{margin:0}
+.preUI{transition:opacity .8s ease}
+.preUI.off{opacity:0}
+#charBox.zoom{transition:clip-path 1.5s cubic-bezier(.6,0,.2,1)}
+#charBox.zoom #charSvg{transition:transform 1.5s cubic-bezier(.6,0,.2,1)}
+.next{position:absolute;width:56px;height:72px;animation:bob 1s ease-in-out infinite;transform:rotate(90deg);pointer-events:none}
+@keyframes bob{50%{translate:0 14px}}
+#preNext{left:2600px;top:1650px}
+#preHint{position:absolute;left:1795px;top:1668px;font-size:44px;color:var(--graphite)}
+
+/* ---------- desktop ---------- */
+#chatS{position:absolute;left:730px;top:1296px;width:1040px;height:140px;font-size:50px;line-height:1.36;overflow:hidden}
+#deskNext{left:1726px;top:1400px;width:38px;height:50px}
+.file{position:absolute;cursor:grab;transition:transform .16s ease;touch-action:none}
+.file img{position:absolute;top:0;max-width:none;pointer-events:none;-webkit-user-drag:none}
+.file .open{display:none}
+.file.hover{transform:scale(1.1);z-index:5}
+.file.hover .open{display:block}
+.file.hover .closed.hasopen{visibility:hidden}
+.file.dragging{transition:none;z-index:30;cursor:grabbing;filter:drop-shadow(10px 16px 0 rgba(0,0,0,.25))}
+.file.home{transition:transform .35s cubic-bezier(.3,1.5,.5,1)}
+.file.done{opacity:.55}
+.file:focus-visible{outline:6px dashed var(--paper);outline-offset:10px}
+#uploadBox{position:absolute;left:1109px;top:227px;width:605px;height:788px;transition:transform .15s}
+#uploadBox.over{transform:scale(1.05) rotate(-1deg)}
+#uploadBox img{position:absolute;inset:0;width:100%;height:100%}
+#prog{position:absolute;left:1100px;top:1030px;width:620px;height:130px}
+
+/* ---------- windows ---------- */
+#dim{position:absolute;inset:0;background:var(--dim);opacity:0;transition:opacity .25s;pointer-events:none;z-index:20}
+#dim.on{opacity:1;pointer-events:auto}
+.win{position:absolute;z-index:30;transform-origin:50% 50%;animation:pop .22s cubic-bezier(.3,1.4,.6,1)}
+@keyframes pop{from{transform:scale(.86);opacity:0}}
+.win>img.frame{position:absolute;inset:0;width:100%;height:100%;max-width:none;pointer-events:none}
+.xbtn{position:absolute;border:0;background:transparent;cursor:pointer;padding:0;border-radius:6px}
+.xbtn:hover,.xbtn:focus-visible{background:rgba(0,0,0,.12);outline:none}
+.wbody{position:absolute}
+
+/* poster */
+.poster{font-size:62px;line-height:1.55}
+.poster h2{margin:0 0 64px;font-weight:400;font-size:80px;line-height:1.1;letter-spacing:.04em}
+.poster p{margin:0}
+
+/* news */
+.news{font-family:var(--type);font-size:58px;line-height:1.6;color:var(--ink)}
+.news h2{margin:0;font-family:var(--print);font-weight:400;font-size:116px;line-height:1.08;text-wrap:balance;padding-bottom:56px;border-bottom:5px solid var(--ink);margin-bottom:64px}
+.news p{margin:0 0 48px}
+.news .drop::first-letter{float:left;font-family:var(--print);font-size:200px;line-height:.8;padding:16px 22px 0 0}
+
+/* diary */
+.diary{--lh:96px;font-family:var(--diary);font-size:78px;line-height:var(--lh);color:#1c1c22;
+  background:repeating-linear-gradient(to bottom,transparent 0 calc(var(--lh) - 2px),#c9d3e0 calc(var(--lh) - 2px) var(--lh));background-position:0 6px}
+.diary .page{display:none}
+.diary .page.on{display:block}
+.diary .date{font-size:86px;letter-spacing:.04em;text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:12px;margin-bottom:var(--lh)}
+.diary p{margin:0}
+.diary .entry{margin-bottom:var(--lh)}
+.arrow{position:absolute;border:0;background:transparent;cursor:pointer;padding:0;transition:transform .15s}
+.arrow img{width:100%;height:100%;max-width:none;pointer-events:none}
+.arrow:hover,.arrow:focus-visible{transform:scale(1.1);outline:none}
+.arrow.pulse{animation:pulse .6s ease-in-out 5}
+@keyframes pulse{50%{transform:scale(1.45)}}
+#pageNo{position:absolute;font-family:var(--hand);font-size:60px;text-align:center}
+
+/* photo caption */
+.caption{font-family:var(--diary);font-size:96px;line-height:1;display:flex;justify-content:space-between;align-items:center}
+
+/* clothes */
+#btn4{position:absolute;border:0;padding:0;background:transparent;cursor:pointer;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+#btn4 img{width:100%;height:100%;max-width:none;pointer-events:none}
+#btn4:hover,#btn4:focus-visible{transform:scale(1.09);outline:none}
+#btn4:active{transform:scale(.96)}
+
+/* ---------- effects ---------- */
+#fx,#fly{position:absolute;inset:0;width:3200px;height:2000px;pointer-events:none;z-index:60}
+#noise{position:absolute;inset:0;width:3200px;height:2000px;pointer-events:none;z-index:70;opacity:0;image-rendering:pixelated}
+#popups{position:absolute;inset:0;pointer-events:none;z-index:65}
+.popup{position:absolute;font-family:var(--hand);color:var(--ink)}
+.popup svg.rr{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.popup .bar{position:relative;display:flex;align-items:center;gap:20px;padding:16px 22px 8px;font-family:var(--sys);font-size:38px;letter-spacing:.1em;border-bottom:5px solid var(--ink)}
+.popup .bar i{width:40px;height:40px;border:5px solid var(--ink);display:grid;place-items:center;font-style:normal;font-size:30px;line-height:1}
+.popup .msg{position:relative;padding:22px 30px;font-size:86px;line-height:1.08}
+.popup.sys .msg{font-family:var(--sys);font-size:68px}
+#stage.tear #shake{animation:tear .09s steps(2) infinite}
+@keyframes tear{0%{transform:translate(-18px,6px) skewX(2deg)}50%{transform:translate(16px,-8px) skewX(-3deg)}100%{transform:translate(0,10px)}}
+#stage.invert #shake{filter:invert(1) contrast(1.4)}
+#blackout{position:absolute;inset:0;background:#000;z-index:80;display:grid;place-items:center;color:#e8e8e8;font-family:var(--sys);font-size:72px;letter-spacing:.08em}
+#crashImg{position:absolute;inset:0;z-index:90;background:#fff}
+#crashImg img{width:100%;height:100%;object-fit:cover;max-width:none}
+#crashImg.in{animation:crashin .5s steps(5)}
+@keyframes crashin{0%{filter:invert(1)}40%{filter:none;transform:translateX(30px)}60%{filter:invert(1);transform:translateX(-30px)}100%{filter:none}}
+
+/* ---------- WINPART (placeholder) ---------- */
+#winpart{position:absolute;inset:0;z-index:95;display:grid;place-items:center;background:rgba(255,255,255,.0);animation:winbg 1.2s forwards}
+@keyframes winbg{to{background:rgba(255,255,255,.92)}}
+#winpart .card{position:relative;width:1500px;padding:120px 80px 100px;text-align:center;animation:pop .5s .3s both cubic-bezier(.3,1.5,.6,1)}
+#winpart .card svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#winpart h1{position:relative;margin:0;font-weight:400;font-size:280px;line-height:1;letter-spacing:.08em}
+#winpart p{position:relative;margin:60px 0 0;font-size:60px;color:var(--graphite)}
+#winpart button{position:relative;margin-top:50px;font-family:var(--hand);font-size:56px;padding:18px 60px;background:var(--paper);border:6px solid var(--ink);border-radius:30px 8px 34px 10px;cursor:pointer}
+#winpart button:hover,#winpart button:focus-visible{transform:scale(1.06);outline:none}
+
+#rotate{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;color:#bbb;font-family:var(--hand);font-size:15px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (prefers-reduced-motion:reduce){#stage.tear #shake{animation:none}.next{animation:none}}
+</style>
+
+<div id="viewport">
+<div id="stage">
+ <div id="shake">
+  <img class="bg" src="assets/background.jpg" alt="">
+
+  <!-- 1. LOGIN -->
+  <section id="login" class="layer">
+    <div id="loginFrame" class="layer">
+      <img class="sprite" data-m="login" alt="">
+      <img class="sprite" id="loginBox" src="assets/loginbox.png" alt="">
+      <button id="loginX" aria-label="Close"></button>
+      <form id="loginForm" autocomplete="off">
+        <input id="nameInput" maxlength="14" placeholder="your name" aria-label="Your name" spellcheck="false">
+        <button id="enterBtn" type="submit" disabled><svg data-rough="260,96,11,6" aria-hidden="true"></svg><span>ENTER</span></button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 2. CAESAR WELCOME -->
+  <section id="prechat" class="layer" hidden>
+    <img class="sprite preUI off" id="preFrame" src="assets/panel.png" style="left:432px;top:168px;width:2328px;height:1712px" alt="">
+    <div id="preCharSlot"></div>
+    <img class="sprite preUI off" id="preChat" data-m="chatm" alt="">
+    <div id="chatLog" class="preUI off" aria-live="polite"></div>
+    <div id="preHint" hidden>click to continue</div>
+    <img class="next" id="preNext" src="assets/arrowR.png" hidden alt="">
+  </section>
+
+  <!-- 3. DESKTOP -->
+  <section id="desktop" class="layer" hidden>
+    <img class="sprite" data-m="panel" alt="">
+    <div id="deskCharSlot"></div>
+    <div id="uploadBox"><img id="uploadImg" src="assets/upload.png" alt="Upload box"></div>
+    <img class="sprite" id="prog" src="assets/prog0.png" alt="0 of 3 uploaded">
+    <img class="sprite" data-m="chats" alt="">
+    <div id="chatS" aria-live="polite"></div>
+    <img class="next" id="deskNext" src="assets/arrowR.png" hidden alt="">
+    <div id="files"></div>
+    <div id="dim"></div>
+    <div id="wins"></div>
+  </section>
+
+  <div id="popups"></div>
+  <canvas id="fx" width="1600" height="1000"></canvas>
+  <canvas id="fly" width="1600" height="1000"></canvas>
+  <canvas id="noise" width="400" height="250"></canvas>
+ </div>
+ <div id="blackout" hidden></div>
+ <div id="crashImg" hidden><img src="assets/crashing.jpg" alt="Caesar crashing"></div>
+ <div id="loading">loading Caesar…</div>
+</div>
+</div>
+<div id="rotate" hidden>Turn your phone sideways for a bigger screen.</div>
+
+<!-- Caesar, assembled from the artist's separate layers (coordinates are the 3200x2000 source canvas). -->
+<template id="charTpl">
+<div id="charBox">
+<svg id="charSvg" viewBox="0 0 3200 2000" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <clipPath id="cp1L"><rect x="533" y="462" width="42" height="80"/></clipPath>
+  <clipPath id="cp1R"><rect x="707" y="459" width="37" height="84"/></clipPath>
+  <clipPath id="cp2L"><rect x="529" y="508" width="36" height="82"/></clipPath>
+  <clipPath id="cp2R"><rect x="662" y="476" width="50" height="104"/></clipPath>
+  <clipPath id="neckCut1"><path d="M400 2000 L400 700 L606 702 L617 686 L629 704 L642 684 L654 706 L667 688 L679 705 L692 690 L705 702 L1300 700 L1300 2000Z"/></clipPath>
+  <clipPath id="neckCut2"><path d="M500 2000 L500 712 L676 714 L692 698 L712 718 L732 696 L752 716 L772 700 L792 718 L812 700 L832 714 L1000 712 L1000 2000Z"/></clipPath>
+  <radialGradient id="socket"><stop offset="0" stop-color="#000"/><stop offset=".75" stop-color="#0b0707"/><stop offset="1" stop-color="#2a1616"/></radialGradient>
+ </defs>
+
+ <!-- appearance 1 : head > bunches > body > neck -->
+ <g id="A1">
+  <!-- neck narrowed and raised to match the beauty.png reference: x' = 645 + 0.7(x - 1081), y' = y - 320 (so it widens toward the collar) -->
+  <g id="neckG1"><g id="neck1"><image href="assets/neck1.png" x="892" y="762" width="378" height="508" transform="translate(645 -320) scale(0.7 1) translate(-1081 0)"/></g></g>
+  <g id="stump1" visibility="hidden" transform="translate(645 0) scale(0.7 1) translate(-646 0)">
+    <path d="M590 702 L605 686 L622 704 L640 684 L658 706 L676 688 L694 705 L712 690 L730 702 L716 716 L600 716Z" fill="#0b0707" stroke="#141414" stroke-width="5"/>
+    <path class="cable" d="M615 698 C 600 650, 640 640, 628 600" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
+    <path class="cable" d="M662 696 C 690 650, 650 630, 676 590" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+    <path d="M628 600 l-12 -14 M628 600 l14 -10 M676 590 l-6 -18 M676 590 l16 -4" stroke="#141414" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g id="bodyG1"><image href="assets/body1.png" x="262" y="730" width="757" height="744"/></g>
+  <g id="headG1">
+   <g id="tailL1"><image href="assets/tailL.png" x="184" y="133" width="356" height="758"/></g>
+   <g id="tailR1"><image href="assets/tailR.png" x="756" y="136" width="336" height="715"/></g>
+   <g id="torn1" visibility="hidden" transform="translate(645 0) scale(0.7 1) translate(-646 0)">
+     <path d="M600 680 L598 742 L612 728 L626 750 L640 730 L656 752 L670 732 L686 748 L700 726 L704 680Z" fill="#fff" stroke="#141414" stroke-width="5" stroke-linejoin="round"/>
+     <path d="M603 735 L612 728 L626 750 L640 730 L656 752 L670 732 L686 748 L700 726 L700 738 L686 760 L670 744 L656 764 L640 742 L626 762 L612 742Z" fill="#0b0707"/>
+     <path d="M630 752 C 626 800, 650 820, 640 860 M668 748 C 680 790, 660 812, 676 850" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+   </g>
+   <image id="head1" href="assets/head1.png" x="436" y="198" width="407" height="610"/>
+   <g id="eyes1">
+    <g clip-path="url(#cp1L)"><image id="p1L" href="assets/head1_pupil0.png" x="539" y="467" width="25" height="69"/></g>
+    <g clip-path="url(#cp1R)"><image id="p1R" href="assets/head1_pupil1.png" x="713" y="465" width="23" height="75"/></g>
+   </g>
+   <image id="mouth1" href="assets/head1_mouth.png" x="592" y="605" width="80" height="46"/>
+   <image id="blink1" href="assets/blink1.png" x="490" y="436" width="290" height="126" visibility="hidden"/>
+   <g id="sockets1" visibility="hidden">
+     <ellipse cx="554" cy="503" rx="19" ry="38" fill="url(#socket)"/>
+     <ellipse cx="725" cy="502" rx="17" ry="40" fill="url(#socket)"/>
+   </g>
+  </g>
+ </g>
+
+ <!-- appearance 2 : head2 > body2 > neck2 -->
+ <g id="A2" display="none">
+  <g id="neckG2"><image id="neck2" href="assets/neck2.png" x="669" y="591" width="166" height="283"/></g>
+  <g id="stump2" visibility="hidden">
+    <path d="M676 714 L692 698 L712 718 L732 696 L752 716 L772 700 L792 718 L812 700 L832 714 L818 730 L686 730Z" fill="#0b0707" stroke="#141414" stroke-width="5"/>
+    <path d="M712 710 C 700 660, 740 650, 728 610 M776 708 C 800 660, 764 640, 790 600" fill="none" stroke="#141414" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g id="bodyG2"><image href="assets/body2.png" x="225" y="682" width="766" height="847"/></g>
+  <g id="headG2">
+   <g id="torn2" visibility="hidden">
+     <path d="M676 690 L672 752 L690 736 L706 760 L722 738 L740 762 L756 740 L774 758 L790 734 L800 690Z" fill="#fff" stroke="#141414" stroke-width="5" stroke-linejoin="round"/>
+     <path d="M676 745 L690 736 L706 760 L722 738 L740 762 L756 740 L774 758 L790 734 L796 748 L774 772 L756 752 L740 774 L722 750 L706 772 L690 750Z" fill="#0b0707"/>
+     <path d="M710 762 C 704 810, 730 830, 718 870 M760 758 C 772 800, 752 822, 768 860" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+   </g>
+   <image id="head2" href="assets/head2.png" x="374" y="150" width="635" height="646"/>
+   <g id="eyes2">
+    <g clip-path="url(#cp2L)"><image id="p2L" href="assets/head2_pupil0.png" x="539" y="524" width="20" height="53"/></g>
+    <g clip-path="url(#cp2R)"><image id="p2R" href="assets/head2_pupil1.png" x="675" y="503" width="23" height="62"/></g>
+   </g>
+   <image id="mouth2" href="assets/head2_mouth.png" x="593" y="647" width="37" height="26"/>
+   <g id="blink2" visibility="hidden">
+     <ellipse cx="547" cy="552" rx="21" ry="44" fill="#fff"/>
+     <ellipse cx="687" cy="536" rx="30" ry="52" fill="#fff"/>
+     <path d="M526 560 Q546 576 567 556 M655 548 Q686 568 717 540" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
+   </g>
+   <g id="sockets2" visibility="hidden">
+     <ellipse cx="547" cy="550" rx="17" ry="40" fill="url(#socket)"/>
+     <ellipse cx="687" cy="530" rx="24" ry="50" fill="url(#socket)"/>
+   </g>
+  </g>
+ </g>
+
+ <!-- popped eyes live in body space so gravity points down -->
+ <g id="eyeballs" visibility="hidden">
+   <path id="cordL" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
+   <path id="cordR" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
+   <g id="ballL"><circle r="42" fill="#fff" stroke="#141414" stroke-width="6"/><path d="M-30 -18 q10 6 14 -2 M28 14 q-12 -2 -12 8 M-22 26 q8 -8 16 -4" fill="none" stroke="#141414" stroke-width="3"/><image id="ballLp" x="-12" y="-30" width="25" height="60"/></g>
+   <g id="ballR"><circle r="42" fill="#fff" stroke="#141414" stroke-width="6"/><path d="M26 -20 q-10 8 -14 -2 M-28 12 q12 0 10 10 M20 26 q-8 -8 -16 -2" fill="none" stroke="#141414" stroke-width="3"/><image id="ballRp" x="-12" y="-30" width="25" height="60"/></g>
+ </g>
+</svg>
+</div>
+</template>
+
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const M={"head1":[436,198,407,610],"login":[712,311,1719,1316],"panel":[188,133,1620,1188],"chatm":[1730,260,1017,1543],"chats":[693,1164,1117,306],
+ "file1":[2513,150,362,365],"file2":[2184,698,388,391],"file3":[2702,1164,387,393],"file4":[266,1496,395,390],"file5":[2035,1508,411,399],"img":[1008,1600,363,355],
+ "win1":[595,31,2314,1848],"win2":[1156,53,1729,1816],"win3":[1156,53,1729,1816],"win4":[1155,409,1140,833],"win5":[900,548,1174,929],"winimg":[1074,161,1718,1830],
+ "arrowL":[1226,1713,188,131],"arrowR":[2606,1676,214,148],"btn4":[1414,648,485,311]};
+const place=(el,b)=>{el.style.left=b[0]+'px';el.style.top=b[1]+'px';el.style.width=b[2]+'px';el.style.height=b[3]+'px';return el;};
+document.querySelectorAll('[data-m]').forEach(el=>{const k=el.dataset.m;place(el,M[k]);el.src='assets/'+k+'.png';});
+
+/* ---------- seeded hand-drawn rectangles ---------- */
+function rng(seed){let s=seed>>>0||1;return()=>(s=(s*1664525+1013904223)>>>0)/4294967296;}
+function roughPath(w,h,seed,j){
+  const r=rng(seed),J=()=>(r()-.5)*2*j,pts=[];
+  const edge=(x0,y0,x1,y1,n)=>{for(let i=0;i<n;i++){const t=i/n;pts.push([x0+(x1-x0)*t+J(),y0+(y1-y0)*t+J()]);}};
+  const n=Math.max(3,Math.round((w+h)/260));
+  edge(0,0,w,0,n);edge(w,0,w,h,n);edge(w,h,0,h,n);edge(0,h,0,0,n);
+  pts.push([pts[0][0]+J()+6,pts[0][1]+J()]);
+  return 'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L');
+}
+function roughSVG(w,h,seed,sw=7,fill='#fff'){
+  return `<svg class="rr" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${roughPath(w,h,seed,sw*.7)}" fill="${fill}" stroke="#141414" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/><path d="${roughPath(w,h,seed+7,sw*.9)}" fill="none" stroke="#141414" stroke-width="${sw*.45}" stroke-linecap="round"/></svg>`;
+}
+document.querySelectorAll('svg[data-rough]').forEach(s=>{const [w,h,seed,sw]=s.dataset.rough.split(',').map(Number);s.outerHTML=roughSVG(w,h,seed,sw);});
+
+/* ---------- stage scaling ---------- */
+const stage=$('stage');let SC=1,OX=0,OY=0;
+function fit(){const vw=innerWidth,vh=innerHeight;SC=Math.min(vw/3200,vh/2000);OX=(vw-3200*SC)/2;OY=(vh-2000*SC)/2;
+  stage.style.transform=`translate(${OX}px,${OY}px) scale(${SC})`;$('rotate').hidden=!(vh>vw*1.1);}
+addEventListener('resize',fit);fit();
+const toStage=e=>({x:(e.clientX-OX)/SC,y:(e.clientY-OY)/SC});
+
+/* ---------- sound (starts after the first click) ---------- */
+let AC=null;
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC;}
+function tone(f,d,type='sine',v=.05,slide=0,at=0){const a=ac();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,f*slide),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.02);}
+function noise(d,v=.15,hp=200,at=0){const a=ac();if(!a)return;const n=Math.floor(a.sampleRate*d),b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=(Math.random()*2-1)*(1-i/n);const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='highpass';f.frequency.value=hp;const g=a.createGain();g.gain.value=v;s.connect(f).connect(g).connect(a.destination);s.start(a.currentTime+at);}
+const sfx={
+  blip(){tone(640+Math.random()*180,.045,'triangle',.018);},
+  ok(){tone(660,.16,'triangle',.06);tone(990,.3,'triangle',.06,0,.12);},
+  open(){tone(420,.08,'square',.02,1.6);},
+  close(){tone(520,.08,'square',.02,.6);},
+  swap(){[520,660,880,1170].forEach((f,i)=>tone(f,.14,'sine',.05,0,i*.06));},
+  glitch(){for(let i=0;i<6;i++)tone(80+Math.random()*900,.06,'square',.03,Math.random()*3,i*.05);noise(.25,.05,1500);},
+  crack(){noise(.18,.5,60);tone(90,.35,'sawtooth',.18,.3);noise(.05,.4,2000,.03);},
+  pop(){tone(300,.12,'sine',.2,.25);noise(.08,.25,400);},
+  drone(d){tone(55,d,'sawtooth',.06,.7);tone(58,d,'square',.03,.9);}
+};
+
+/* ---------- character ---------- */
+const charBox=$('charTpl').content.firstElementChild.cloneNode(true);
+const E={};['A1','A2','headG1','headG2','bodyG1','bodyG2','neckG1','neckG2','neck1','neck2','tailL1','tailR1','head1','p1L','p1R','p2L','p2R','mouth1','mouth2','blink1','blink2','eyes1','eyes2','stump1','stump2','torn1','torn2','sockets1','sockets2','eyeballs','cordL','cordR','ballL','ballR','ballLp','ballRp','charSvg'].forEach(k=>E[k]=charBox.querySelector('#'+k));
+const APP={
+ 1:{pivot:[645,700],eye:[640,502],look:[6,5],pupils:['p1L','p1R'],mouth:'mouth1',mtop:605,sock:[[554,503],[725,502]],stump:[660,700],pup:['assets/head1_pupil0.png','assets/head1_pupil1.png']},
+ 2:{pivot:[720,705],eye:[617,540],look:[7,6],pupils:['p2L','p2R'],mouth:'mouth2',mtop:647,sock:[[547,550],[687,530]],stump:[752,712],pup:['assets/head2_pupil0.png','assets/head2_pupil1.png']}
+};
+const C={app:1,mode:'pre',look:{x:0,y:0},lookT:{x:0,y:0},talk:false,smile:false,blink:false,blinkAt:2.5,
+  g:{a:0,tx:0,ty:0,va:0,target:null,twitch:0,broken:false,eyes:null,bounce:0}};
+function charMode(mode){
+  C.mode=mode;
+  charBox.style.clipPath='';charBox.classList.remove('zoom');
+  if(mode==='pre'){$('preCharSlot').appendChild(charBox);place(charBox,[0,0,3200,2000]);preView(PRE_FIT);}
+  else{$('deskCharSlot').appendChild(charBox);place(charBox,[196,141,1604,1172]);E.charSvg.style.transform='translate(-196px,-141px)';}
+}
+// welcome screen: Caesar first fills the screen, then settles inside the window frame (clipped to its inner edge)
+const PRE_BIG={s:2.7,tx:1600-640*2.7,ty:1000-470*2.7,clip:'inset(0px 0px 0px 0px)'};
+const PRE_FIT={s:1.43,tx:200,ty:15,clip:'inset(182px 455px 134px 446px)'};
+let PRE_XF=PRE_FIT;
+function preView(v){PRE_XF=v;E.charSvg.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.s})`;charBox.style.clipPath=v.clip;}
+function charToStage(p){return C.mode==='pre'?{x:p[0]*PRE_XF.s+PRE_XF.tx,y:p[1]*PRE_XF.s+PRE_XF.ty}:{x:p[0],y:p[1]};}
+function setApp(n){C.app=n;E.A1.setAttribute('display',n===1?'inline':'none');E.A2.setAttribute('display',n===2?'inline':'none');}
+function setSmile(on){C.smile=on;if(C.app!==1)return;E.head1.setAttribute('href',on?'assets/hsmile.png':'assets/head1.png');
+  E.eyes1.setAttribute('visibility',on?'hidden':'visible');E.mouth1.setAttribute('visibility',on?'hidden':'visible');}
+let mouse={x:1600,y:900};
+addEventListener('pointermove',e=>{mouse=toStage(e);});
+// head transform in body space: p' = R(a)(p - pivot) + pivot + t
+function headXf(){const A=APP[C.app],g=C.g,t=performance.now()/1000;
+  const sway=Math.sin(t*1.1)*1.1+C.look.x*1.4+(C.talk?Math.sin(t*7)*.6:0);
+  let a=sway+g.a,tx=g.tx+C.look.x*4,ty=g.ty-g.bounce+Math.sin(t*2.2)*2.5;
+  if(g.twitch>0){a+=(Math.random()-.5)*8*g.twitch;tx+=(Math.random()-.5)*14*g.twitch;ty+=(Math.random()-.5)*10*g.twitch;}
+  return {a,tx,ty,px:A.pivot[0],py:A.pivot[1]};}
+function xfPoint(h,p){const r=h.a*Math.PI/180,c=Math.cos(r),s=Math.sin(r),dx=p[0]-h.px,dy=p[1]-h.py;return [c*dx-s*dy+h.px+h.tx,s*dx+c*dy+h.py+h.ty];}
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000,A=APP[C.app],g=C.g;
+  // eyes follow the pointer
+  const ec=charToStage(A.eye),dx=mouse.x-ec.x,dy=mouse.y-ec.y,d=Math.hypot(dx,dy)||1,k=Math.min(1,d/700);
+  C.lookT.x=dx/d*k;C.lookT.y=dy/d*k;
+  C.look.x+=(C.lookT.x-C.look.x)*Math.min(1,dt*10);C.look.y+=(C.lookT.y-C.look.y)*Math.min(1,dt*10);
+  A.pupils.forEach(id=>E[id].setAttribute('transform',`translate(${(C.look.x*A.look[0]).toFixed(2)} ${(C.look.y*A.look[1]).toFixed(2)})`));
+  // neck snap spring
+  if(g.target!==null){const f=(g.target-g.a)*60-g.va*7;g.va+=f*dt;g.a+=g.va*dt;}
+  if(g.twitch>0&&!g.hold)g.twitch=Math.max(0,g.twitch-dt*.2);
+  g.bounce*=Math.pow(.02,dt);
+  const h=headXf();
+  E['headG'+C.app].setAttribute('transform',`translate(${h.tx.toFixed(2)} ${h.ty.toFixed(2)}) rotate(${h.a.toFixed(3)} ${h.px} ${h.py})`);
+  // breathing
+  const br=Math.sin(t*1.6);
+  E['bodyG'+C.app].setAttribute('transform',`translate(0 ${(-br*3).toFixed(2)})`);
+  E['neckG'+C.app].setAttribute('transform',`translate(0 ${(-br*2).toFixed(2)})`);
+  if(C.app===1){const sw=Math.sin(t*1.1-.6)*2.2-h.a*.35-C.look.x*1.5;
+    E.tailL1.setAttribute('transform',`rotate(${(sw).toFixed(2)} 492 262)`);
+    E.tailR1.setAttribute('transform',`rotate(${(-Math.sin(t*1.1-.9)*2.2-h.a*.35-C.look.x*1.5).toFixed(2)} 786 262)`);}
+  // mouth
+  const m=E[A.mouth];
+  if(C.talk&&!C.smile){const o=.22+.78*Math.abs(Math.sin(t*15+Math.sin(t*5)));m.setAttribute('transform',`translate(0 ${A.mtop}) scale(1 ${o.toFixed(2)}) translate(0 ${-A.mtop})`);}
+  else m.removeAttribute('transform');
+  // blink
+  if(!g.eyes&&!C.smile&&t>C.blinkAt){C.blink=true;C.blinkAt=t+2.2+Math.random()*3.5;setTimeout(()=>{C.blink=false;},120);}
+  const bl=C.blink&&!g.eyes&&!C.smile;
+  E.blink1.setAttribute('visibility',bl&&C.app===1?'visible':'hidden');
+  E.blink2.setAttribute('visibility',bl&&C.app===2?'visible':'hidden');
+  if(!C.smile)E['eyes'+C.app].setAttribute('visibility',bl||g.eyes?'hidden':'visible');
+  if(g.eyes)eyeStep(dt,h);
+  fxStep(dt,h);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- popped eyes ---------- */
+function eyePop(){const A=APP[C.app],h=headXf();
+  E['sockets'+C.app].setAttribute('visibility','visible');E['eyes'+C.app].setAttribute('visibility','hidden');
+  E.ballLp.setAttribute('href',A.pup[0]);E.ballRp.setAttribute('href',A.pup[1]);
+  const mk=(i,dir)=>{const s=xfPoint(h,A.sock[i]);return {x:s[0],y:s[1],vx:dir*(260+Math.random()*160),vy:-(380+Math.random()*120),rot:0,vr:dir*400};};
+  C.g.eyes=[mk(0,-1),mk(1,1)];E.eyeballs.setAttribute('visibility','visible');
+}
+function eyeStep(dt,h){const A=APP[C.app];
+  C.g.eyes.forEach((b,i)=>{const s=xfPoint(h,A.sock[i]);
+    b.vy+=1500*dt;const dx=b.x-s[0],dy=b.y-s[1],d=Math.hypot(dx,dy)||1,L=170;
+    if(d>L){const f=(d-L)*40;b.vx-=dx/d*f*dt;b.vy-=dy/d*f*dt;}
+    b.vx*=Math.pow(.35,dt);b.vy*=Math.pow(.35,dt);b.x+=b.vx*dt;b.y+=b.vy*dt;b.rot+=b.vr*dt;b.vr*=Math.pow(.2,dt);
+    const ball=i?E.ballR:E.ballL,cord=i?E.cordR:E.cordL;
+    ball.setAttribute('transform',`translate(${b.x.toFixed(1)} ${b.y.toFixed(1)}) rotate(${b.rot.toFixed(1)})`);
+    const mx=(s[0]+b.x)/2+(i?18:-18),my=Math.max(s[1],b.y)+40;
+    cord.setAttribute('d',`M${s[0].toFixed(1)} ${s[1].toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${b.x.toFixed(1)} ${(b.y-30).toFixed(1)}`);
+    if(Math.random()<dt*14){const p=charToStage(s);drop(p.x,p.y+20,(Math.random()-.5)*60,40,5+Math.random()*6,true);}
+  });
+}
+
+/* ---------- ink / oil particles ---------- */
+const fx=$('fx'),fc=fx.getContext('2d'),fl=$('fly').getContext('2d');const P=[];let spray=null;
+function drop(x,y,vx,vy,r,drip){P.push({x,y,vx,vy,r,life:.5+Math.random()*1.2,drip,stuck:false,len:0});}
+function fxStep(dt,h){
+  if(spray&&spray.t>0){spray.t-=dt;const s=charToStage(xfPoint({a:0,tx:0,ty:0,px:0,py:0},APP[C.app].stump));
+    spray.acc=(spray.acc||0)+spray.rate*dt*(spray.t/spray.T);while(spray.acc>=1){spray.acc--;const ang=(-90+(Math.random()-.5)*80)*Math.PI/180,sp=500+Math.random()*1100;drop(s.x+(Math.random()-.5)*50,s.y,Math.cos(ang)*sp,Math.sin(ang)*sp,3+Math.random()*9,Math.random()<.4);}}
+  fc.setTransform(.5,0,0,.5,0,0);fl.setTransform(1,0,0,1,0,0);fl.clearRect(0,0,1600,1000);fl.setTransform(.5,0,0,.5,0,0);fl.fillStyle='#0b0707';
+  for(const p of P){
+    if(!p.stuck){p.vy+=2600*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;
+      if(p.life<=0||p.y>1990){p.stuck=true;fc.fillStyle='#0b0707';splat(p.x,p.y,p.r*1.8);}
+      else{const v=Math.hypot(p.vx,p.vy)||1;fl.beginPath();fl.ellipse(p.x,p.y,p.r*(1+Math.min(2,v/900)),p.r,Math.atan2(p.vy,p.vx),0,7);fl.fill();}}
+    else if(p.drip&&p.len<200+p.r*20){const dl=dt*(30+p.r*6);fc.fillStyle='#0b0707';fc.fillRect(p.x-p.r*.35,p.y+p.len,p.r*.7,dl+1);p.len+=dl;
+      fc.beginPath();fc.arc(p.x,p.y+p.len,p.r*.5,0,7);fc.fill();}
+  }
+  for(let i=P.length-1;i>=0;i--)if(P[i].stuck&&(!P[i].drip||P[i].len>=200+P[i].r*20))P.splice(i,1);
+}
+function splat(x,y,r){fc.beginPath();fc.arc(x,y,r,0,7);fc.fill();for(let i=0;i<5;i++){const a=Math.random()*7,d=r*(1+Math.random()*1.4);fc.beginPath();fc.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,r*.25*Math.random()+2,0,7);fc.fill();}}
+function clearFx(){P.length=0;spray=null;fc.setTransform(1,0,0,1,0,0);fc.clearRect(0,0,fx.width,fx.height);fl.setTransform(1,0,0,1,0,0);fl.clearRect(0,0,1600,1000);}
+
+/* static noise */
+const nz=$('noise'),nc=nz.getContext('2d');let noiseOn=false;
+function noiseLoop(){if(!noiseOn)return;const im=nc.createImageData(400,250),d=im.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}
+  nc.putImageData(im,0,0);for(let k=0;k<6;k++){nc.fillStyle=Math.random()<.5?'#000':'#fff';nc.fillRect(0,Math.random()*250,400,2+Math.random()*12);}requestAnimationFrame(noiseLoop);}
+function setNoise(op){nz.style.opacity=op;if(op>0&&!noiseOn){noiseOn=true;noiseLoop();}if(op<=0)noiseOn=false;}
+
+/* ---------- speech ---------- */
+let NAME='friend';
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+let sayToken=0,skip=false;
+async function type(el,text,speed=30){const my=++sayToken;C.talk=true;skip=false;el.textContent='';
+  for(let i=0;i<text.length;i++){if(my!==sayToken)return false;if(skip){el.textContent=text;break;}el.textContent+=text[i];if(i%2===0&&text[i]!==' ')sfx.blip();await wait(text[i]===','||text[i]==='.'?speed*5:speed);}
+  if(my===sayToken)C.talk=false;return true;}
+function sayS(text,speed){return type($('chatS'),text,speed);}
+
+/* ---------- 1. login ---------- */
+const nameInput=$('nameInput'),enterBtn=$('enterBtn');
+nameInput.addEventListener('input',()=>{enterBtn.disabled=!nameInput.value.trim();});
+$('loginForm').addEventListener('submit',e=>{e.preventDefault();const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();startPrechat();});
+$('loginX').addEventListener('click',()=>{const f=$('loginFrame');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');sfx.close();});
+
+/* ---------- 2. welcome ---------- */
+const LINES=()=>[`Hi, ${NAME}, I'm Caesar, and I was AI-designed many years ago.`,
+ `I lost almost all my memories, as the data comes from a broken chip. And I have never been repaired.`,
+ `I want to know who I am, and who made me.`,
+ `This computer already has some information on the desktop that could possibly recall my memory. Could you please upload it to me?`,
+ `Remember, upload the correct one.`];
+let preDone=false;
+async function startPrechat(){
+  $('login').hidden=true;$('prechat').hidden=false;charMode('pre');setApp(1);preView(PRE_BIG);
+  await waitClickOr(2200);
+  charBox.classList.add('zoom');void charBox.offsetWidth;preView(PRE_FIT);
+  await wait(900);document.querySelectorAll('.preUI').forEach(e=>e.classList.remove('off'));
+  await wait(700);charBox.classList.remove('zoom');
+  // visual-novel box: one line at a time, click to go on
+  const log=$('chatLog'),lines=LINES();
+  for(let i=0;i<lines.length;i++){log.textContent='';const p=document.createElement('p');log.appendChild(p);
+    $('preNext').hidden=true;$('preHint').hidden=true;
+    await type(p,lines[i],34);
+    $('preNext').hidden=false;$('preHint').hidden=false;$('preHint').textContent=i===lines.length-1?'click to start':'click to continue';
+    await waitClickOr(0);}
+  preDone=true;goDesktop();
+}
+let clickWaiter=null;
+function waitClickOr(ms){return new Promise(r=>{const t=ms?setTimeout(()=>{clickWaiter=null;r();},ms):0;clickWaiter=()=>{clearTimeout(t);clickWaiter=null;r();};});}
+$('prechat').addEventListener('click',()=>{ac();if(preDone)return;if(C.talk)skip=true;else if(clickWaiter)clickWaiter();});
+
+/* ---------- 3. desktop ---------- */
+const FILES=[
+ {id:'file1',label:'File 1',win:'poster',ok:true},
+ {id:'file2',label:'File 2',win:'news',ok:false},
+ {id:'file3',label:'#@8!3',win:'diary',ok:true},
+ {id:'file4',label:'File 4',win:'clothes',ok:false},
+ {id:'file5',label:'File 555',win:'poison',ok:false,poison:true},
+ {id:'img',label:'IMG_222',win:'photo',ok:true}];
+const S={progress:0,uploaded:new Set(),busy:false,win:null,diary:{page:0,seen:new Set([0]),warned:false}};
+async function goDesktop(){
+  $('prechat').hidden=true;$('desktop').hidden=false;charMode('desk');buildFiles();
+  S.busy=true;
+  await wait(400);await sayS(`Overall, you should upload three things.`);await wait(1300);
+  await sayS(`Two for who I am, one for who made me.`);await wait(1500);
+  await sayS(`Drag a file into the upload box. Double-click a file to look inside.`);
+  S.busy=false;
+}
+function buildFiles(){const box=$('files');box.innerHTML='';
+  FILES.forEach(f=>{const b=M[f.id],el=document.createElement('div');el.className='file';el.id='f_'+f.id;el.tabIndex=0;el.setAttribute('role','button');
+    el.setAttribute('aria-label',f.label+'. Double-click to open, drag to the upload box');place(el,b);
+    const hasOpen=f.id!=='img';
+    el.innerHTML=`<img class="closed${hasOpen?' hasopen':''}" src="assets/${f.id}.png" style="left:0;width:${b[2]}px;height:${b[3]}px" alt="">`+
+      (hasOpen?`<img class="open" src="assets/${f.id}_open.png" style="left:-40px;width:${b[2]+80}px;height:${b[3]}px" alt="">`:'');
+    f.el=el;box.appendChild(el);bindFile(f);});}
+function overUpload(p){return p.x>1090&&p.x<1730&&p.y>210&&p.y<1030;}
+function bindFile(f){const el=f.el;let st=null,lastTap=0;
+  el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'&&!S.win)el.classList.add('hover');});
+  el.addEventListener('pointerleave',()=>{if(!st||!st.drag)el.classList.remove('hover');});
+  el.addEventListener('pointerdown',e=>{if(S.win||S.locked)return;ac();e.preventDefault();el.setPointerCapture(e.pointerId);const p=toStage(e);st={x:p.x,y:p.y,drag:false};el.classList.remove('home');});
+  el.addEventListener('pointermove',e=>{if(!st)return;const p=toStage(e),dx=p.x-st.x,dy=p.y-st.y;
+    if(!st.drag&&Math.hypot(dx,dy)>14){st.drag=true;el.classList.add('dragging');}
+    if(st.drag){el.style.transform=`translate(${dx}px,${dy}px) scale(1.1) rotate(${Math.max(-8,Math.min(8,dx*.01))}deg)`;$('uploadBox').classList.toggle('over',overUpload(p));}});
+  const end=e=>{if(!st)return;const p=toStage(e),was=st.drag;st=null;$('uploadBox').classList.remove('over');
+    el.classList.remove('dragging');el.classList.add('home');el.style.transform='';
+    if(e.pointerType!=='mouse')el.classList.remove('hover');
+    if(was){if(overUpload(p))upload(f);return;}
+    const now=performance.now();if(now-lastTap<420){lastTap=0;openWin(f);}else lastTap=now;};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',e=>{st=null;el.classList.remove('dragging');el.style.transform='';});
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'){openWin(f);}else if(e.key===' '||e.key==='u'){e.preventDefault();upload(f);}});
+}
+
+/* ---------- upload outcomes ---------- */
+async function upload(f){
+  if(S.busy||S.win)return;
+  if(f.poison)return poison();
+  if(!f.ok)return overload(f);
+  if(S.uploaded.has(f.id)){S.busy=true;await sayS(`I already have that one, ${NAME}. Find something else.`);S.busy=false;return;}
+  S.busy=true;S.uploaded.add(f.id);S.progress++;f.el.classList.add('done');
+  $('uploadImg').src='assets/success.png';$('prog').src=`assets/prog${S.progress}.png`;$('prog').alt=`${S.progress} of 3 uploaded`;
+  sfx.ok();setSmile(true);C.g.bounce=26;
+  await sayS(`Great! You uploaded the correct one!`);await wait(1400);
+  $('uploadImg').src='assets/upload.png';setSmile(false);
+  if(S.progress>=3){winpart();return;}
+  const hints={file1:`That poster... XM-813. Is that me?`,file3:`Ida... that name feels warm.`,img:`I took this picture. I remember her back.`};
+  await sayS(hints[f.id]);S.busy=false;
+}
+
+/* NEEDY-STREAMER-OVERLOAD style meltdown for a wrong file */
+const POP_TXT=['WHO AM I','WHO AM I','who am i','THAT\'S NOT ME','caesar.exe is not responding','MEMORY CORRUPTED','ERROR 0x813','don\'t look at me','I\'m fine','I\'m fine I\'m fine I\'m fine','DATA LOST','why why why','please','SYSTEM OVERLOAD','where did you go','{n}?','{n} {n} {n}','STOP','i hate this','404 : self not found'];
+function spawnPopup(){const w=520+Math.random()*560|0,h=230+Math.random()*170|0,el=document.createElement('div');el.className='popup'+(Math.random()<.35?' sys':'');
+  el.style.cssText=`left:${Math.random()*(3200-w)|0}px;top:${Math.random()*(2000-h)|0}px;width:${w}px;height:${h}px;transform:rotate(${(Math.random()-.5)*6}deg)`;
+  const txt=POP_TXT[Math.random()*POP_TXT.length|0].split('{n}').join(NAME);
+  el.innerHTML=roughSVG(w,h,Math.random()*1e6|0,7)+`<div class="bar"><i>×</i>CAESAR.EXE</div><div class="msg"></div>`;el.querySelector('.msg').textContent=txt;
+  $('popups').appendChild(el);if(Math.random()<.5)sfx.glitch();}
+const GL='#@8!3%&¥$█▓▒░ｶｲｻﾙ?!/\\';
+const corrupt=(s,a)=>[...s].map(c=>c!==' '&&Math.random()<a?GL[Math.random()*GL.length|0]:c).join('');
+async function overload(f){
+  S.busy=true;S.locked=true;
+  await sayS(`That's... not me. No. No no no.`,26);
+  charBox.classList.add('glitch');C.g.twitch=.6;C.g.hold=true;sfx.glitch();
+  const base=`THAT'S NOT ME. THAT'S NOT ME. WHO AM I?`;let a=0;
+  const iv=setInterval(()=>{a=Math.min(.85,a+.04);$('chatS').textContent=corrupt(base,a);C.g.twitch=.6+a;},90);
+  let n=0;const pop=setInterval(()=>{spawnPopup();if(++n>6)spawnPopup();},Math.max(60,140));
+  await wait(1200);stage.classList.add('tear');setNoise(.12);sfx.drone(3);
+  const inv=setInterval(()=>stage.classList.toggle('invert',Math.random()<.3),110);
+  await wait(1600);setNoise(.35);
+  await wait(900);
+  clearInterval(iv);clearInterval(pop);clearInterval(inv);
+  await crashScreen('caesar.exe has stopped responding');
+  resetAfterCrash(`...Ugh, my head. That wasn't me, ${NAME}. Let's try again.`);
+}
+
+/* poison file: neck snaps, eyes pop */
+async function poison(){
+  S.busy=true;S.locked=true;
+  await sayS(`Hm? This one feels so cold—`,30);
+  C.g.twitch=.5;C.g.hold=true;sfx.glitch();$('chatS').textContent='—';
+  await wait(900);
+  // SNAP
+  const n=C.app;C.g.twitch=0;C.g.hold=false;
+  E['neck'+n].setAttribute('clip-path',`url(#neckCut${n})`);E['stump'+n].setAttribute('visibility','visible');E['torn'+n].setAttribute('visibility','visible');
+  C.g.target=n===1?84:78;C.g.va=900;C.g.tx=n===1?70:60;C.g.ty=n===1?95:85;
+  sfx.crack();stage.classList.add('tear');setTimeout(()=>stage.classList.remove('tear'),380);
+  spray={t:1.4,T:1.4,rate:150};
+  $('chatS').textContent='I— I— I—';
+  await wait(1200);
+  eyePop();sfx.pop();stage.classList.add('tear');setTimeout(()=>stage.classList.remove('tear'),260);
+  const msg=`I CAN'T SEE YOU ${NAME.toUpperCase()}  `;let a=0;
+  const iv=setInterval(()=>{a=Math.min(.7,a+.03);$('chatS').textContent=corrupt(msg.repeat(4),a*.6);},120);
+  await wait(1800);sfx.drone(2);setNoise(.18);
+  const inv=setInterval(()=>stage.classList.toggle('invert',Math.random()<.18),140);
+  await wait(1200);setNoise(.4);await wait(500);
+  clearInterval(iv);clearInterval(inv);
+  await crashScreen('');
+  resetAfterCrash(`...It's you, ${NAME}. Everything went black. Don't give me that one again.`);
+}
+async function crashScreen(text){
+  stage.classList.remove('tear','invert');setNoise(0);
+  const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();await wait(text?900:250);
+  const ci=$('crashImg');ci.hidden=false;ci.classList.remove('in');void ci.offsetWidth;ci.classList.add('in');bo.hidden=true;
+  // reset the desktop behind the image while it shows
+  $('popups').innerHTML='';clearFx();restoreChar();
+  await wait(3000);
+  ci.hidden=true;
+}
+function restoreChar(){const g=C.g;Object.assign(g,{a:0,tx:0,ty:0,va:0,target:null,twitch:0,hold:false,eyes:null,bounce:0});
+  [1,2].forEach(n=>{E['neck'+n].removeAttribute('clip-path');['stump','torn','sockets'].forEach(k=>E[k+n].setAttribute('visibility','hidden'));});
+  E.eyeballs.setAttribute('visibility','hidden');charBox.classList.remove('glitch');setSmile(false);}
+async function resetAfterCrash(line){
+  // progress stays where it was before the bad upload
+  $('prog').src=`assets/prog${S.progress}.png`;$('uploadImg').src='assets/upload.png';
+  S.locked=false;await wait(300);await sayS(line);S.busy=false;}
+
+/* ---------- WINPART ----------
+   Placeholder for the ending animation. Replace the body of winpart() when the real ending is ready. */
+function winpart(){
+  S.busy=true;S.locked=true;sfx.swap();
+  const w=document.createElement('div');w.id='winpart';
+  w.innerHTML=`<div class="card">${roughSVG(1500,760,813,10)}<h1>YOU WIN</h1><p>Caesar remembers who she is, and who made her.</p><button id="againBtn">play again</button></div>`;
+  stage.appendChild(w);$('againBtn').addEventListener('click',()=>location.reload());
+}
+/* ---------- /WINPART ---------- */
+
+/* ---------- windows ---------- */
+function closeWin(){if(!S.win)return;const w=S.win;
+  if(w.kind==='diary'&&S.diary.seen.size<3&&!S.diary.warned){S.diary.warned=true;w.el.querySelectorAll('.arrow:not([hidden])').forEach(a=>{a.classList.remove('pulse');void a.offsetWidth;a.classList.add('pulse');});sfx.glitch();return;}
+  w.el.remove();S.win=null;$('dim').classList.remove('on');charBox.classList.remove('spot','glow');sfx.close();
+}
+$('dim').addEventListener('click',()=>{});
+addEventListener('keydown',e=>{if(e.key==='Escape')closeWin();});
+function mkWin(key,kind,xBox){const b=M[key],el=document.createElement('div');el.className='win';place(el,b);el.setAttribute('role','dialog');
+  const src=`assets/${key}.png`;
+  el.innerHTML=`<img class="frame" src="${src}" alt="">`;
+  const x=document.createElement('button');x.className='xbtn';x.setAttribute('aria-label','Close');place(x,[xBox[0]-b[0],xBox[1]-b[1],xBox[2],xBox[3]]);x.addEventListener('click',closeWin);el.appendChild(x);
+  $('wins').appendChild(el);S.win={el,kind};$('dim').classList.add('on');sfx.open();setTimeout(()=>x.focus({preventScroll:true}),50);return el;}
+function body(el,winKey,box,html,cls){const b=M[winKey],d=document.createElement('div');d.className='wbody '+(cls||'');place(d,[box[0]-b[0],box[1]-b[1],box[2],box[3]]);d.innerHTML=html;el.appendChild(d);return d;}
+function openWin(f){if(S.win||S.busy)return;f.el.classList.remove('hover');
+  ({poster:openPoster,news:openNews,diary:openDiary,clothes:openClothes,poison:openPoison,photo:openPhoto})[f.win]();}
+
+function openPoster(){const el=mkWin('win1','poster',[598,36,150,150]);
+  body(el,'win1',[2075,200,760,1620],`
+   <h2>Product Introduction</h2>
+   <p>Humanoid Teenage Robot - Girl A Edition, the first super-intelligent product launched by VOns! Model: Xm-813. Price: New product on sale, now only 10,000,000 ☊. Packed with every feature you could ever desire!</p>`,'poster');}
+
+function openNews(){const el=mkWin('win2','news',[1160,58,104,96]);
+  body(el,'win2',[1300,230,1460,1540],`
+   <h2>Abzodiac and Humanoid Robotics</h2>
+   <p class="drop">After World War III, the population in Abzodiac declined by half. Lost and alone, survivors turned to virtual warmth, sparking a robotics boom.</p>
+   <p>By 3039 in Abzodiac, household robots are everywhere to be your friend, your caretaker, and your lover.</p>`,'news');}
+
+const DIARY=[
+ [['3039.11.28',"My brother is dead. Now it's just me and the female bot he left behind in this house. Honestly, I'm not sad at all. I just have no idea how to live with this machine."],
+  ['3039.12.4',"Some stuff happened last night, and okay, I don't dislike her that much now. Today, we decided her name is Caesar. I absolutely love it because of Julius Caesar."]],
+ [['3040.3.21',"People's feelings about robots are flipping. Everyone wants them out of their lives now. I thought it was nothing, but after that rally the other day… God, I'm so scared for Caesar. If you want to destroy them, why create them at all?"],
+  ['3040.4.5',"We have to leave"]],
+ [['3040.8.20',"I can finally bring myself to write this after a few days.\nI made an AI program just to speak to Caesar again. Caesar died on August 13. Her serial number is xm813. Was this fate all along?\nThe government ordered the destruction of all robots. People grew overly reliant on them, lost and discouraged. And honestly, they were right. But still, I can't accept that she's gone.\nWe were almost across the border when they caught us. To save me while I was unconscious, Caesar gave herself up to them. Her chip was handed back to me, crushed and broken, most of her memories wiped.\nThis AI Caesar doesn't know who I am. I don't have words for this.\nHow am I supposed to live without you?"]]];
+function openDiary(){const el=mkWin('win3','diary',[1160,58,104,96]);const D=S.diary;
+  const pg=body(el,'win3',[1290,170,1500,1500],'','diary');
+  DIARY.forEach((entries,i)=>{const p=document.createElement('div');p.className='page';
+    entries.forEach(([d,t])=>{const e=document.createElement('div');e.className='entry';const h=document.createElement('div');h.className='date';h.textContent=d;e.appendChild(h);
+      t.split('\n').forEach(par=>{const q=document.createElement('p');q.textContent=par;e.appendChild(q);});p.appendChild(e);});
+    pg.appendChild(p);});
+  const b=M.win3;
+  const mkA=(k,dir)=>{const a=document.createElement('button');a.className='arrow';a.setAttribute('aria-label',dir<0?'Previous page':'Next page');
+    place(a,[M[k][0]-b[0],M[k][1]-b[1],M[k][2],M[k][3]]);a.innerHTML=`<img src="assets/${k}.png" alt="">`;a.addEventListener('click',()=>{D.page=Math.max(0,Math.min(2,D.page+dir));D.seen.add(D.page);sfx.open();render();});el.appendChild(a);return a;};
+  const L=mkA('arrowL',-1),R=mkA('arrowR',1);
+  const no=document.createElement('div');no.id='pageNo';place(no,[2400-b[0],1712-b[1],170,90]);el.appendChild(no);
+  function render(){[...pg.children].forEach((p,i)=>p.classList.toggle('on',i===D.page));L.hidden=D.page===0;R.hidden=D.page===2;no.textContent=`${D.page+1}/3`;
+    // the last page is the longest entry, so it uses tighter ruling
+    pg.style.setProperty('--lh',D.page===2?'80px':'96px');pg.style.fontSize=D.page===2?'64px':'';}
+  render();}
+
+function openPhoto(){const el=mkWin('winimg','photo',[1150,210,110,110]);
+  body(el,'winimg',[1150,1770,1560,150],`<span>3040.4.6, recorded by Caesar.</span><span>Title: IDA</span>`,'caption');}
+
+function openPoison(){mkWin('win5','poison',[900,548,104,96]);}
+
+function openClothes(){const el=mkWin('win4','clothes',[1160,414,118,118]);
+  // Caesar is lifted above the dimmed desktop so the outfit change is visible
+  charBox.classList.add('spot');
+  const b=M.win4,btn=document.createElement('button');btn.id='btn4';btn.setAttribute('aria-label','Change clothes');
+  place(btn,[M.btn4[0]-b[0],M.btn4[1]-b[1],M.btn4[2],M.btn4[3]]);btn.innerHTML='<img src="assets/btn4.png" alt="">';
+  btn.addEventListener('click',()=>{setApp(C.app===1?2:1);sfx.swap();charBox.classList.remove('glow');void charBox.offsetWidth;charBox.classList.add('glow');
+    sparkle();if(!S.busy)sayS(C.app===2?`Oh! A new look. How do I look, ${NAME}?`:`Back to my usual clothes.`);});
+  el.appendChild(btn);}
+function sparkle(){const A=APP[C.app];for(let i=0;i<16;i++){const s=document.createElement('div');const x=300+Math.random()*900,y=200+Math.random()*1000;
+  s.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:70px;height:70px;z-index:41;pointer-events:none;transition:transform .9s ease-out,opacity .9s;`;
+  s.innerHTML=`<svg viewBox="-35 -35 70 70" width="70" height="70"><path d="M0 -32 L7 -7 L32 0 L7 7 L0 32 L-7 7 L-32 0 L-7 -7Z" fill="#fff" stroke="#141414" stroke-width="4" stroke-linejoin="round"/></svg>`;
+  $('desktop').appendChild(s);requestAnimationFrame(()=>{s.style.transform=`translate(${(Math.random()-.5)*200}px,${-80-Math.random()*160}px) scale(${.3+Math.random()}) rotate(90deg)`;s.style.opacity='0';});setTimeout(()=>s.remove(),1000);}}
+
+/* ---------- boot ---------- */
+const PRE=['background.jpg','login.png','loginbox.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','crashing.jpg','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png'];
+let n=0;PRE.forEach(f=>{const i=new Image();i.onload=i.onerror=()=>{if(++n===PRE.length){$('loading').remove();nameInput.focus({preventScroll:true});}};i.src='assets/'+f;});
+charMode('pre');setApp(1);requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
