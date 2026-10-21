@@ -176,5 +176,12 @@ bx=(966,1230,2118,1458); x0,y0,x1,y1=bx
 sp=np.zeros_like(lg); sp[y0:y1,x0:x1]=lg[y0:y1,x0:x1]
 d=dark(sp); sp[~d]=0; save(sp,'loginbox',scale=0.6)
 lg[y0:y1,x0:x1]=[255,255,255,255]
+# ---- login: lift Caesar's head out too, so it can wobble ----
+x0,y0,x1,y1=1050,570,2020,1190
+reg=lg[y0:y1,x0:x1]
+d=dark(reg); lab,n=ndimage.label(d); sz=ndimage.sum(d,lab,range(1,n+1)); d=np.isin(lab,1+np.where(sz>30)[0])
+hm=ndimage.binary_fill_holes(ndimage.binary_closing(d,iterations=6))|d
+sp=np.zeros_like(lg); sp[y0:y1,x0:x1][hm]=reg[hm]; save(sp,'loginhead',scale=0.6)
+lg[y0:y1,x0:x1][ndimage.binary_dilation(hm,iterations=3)]=[255,255,255,255]
 save(lg,'login',scale=0.6)
 json.dump(META,open(OUT+'meta.json','w'),indent=1)

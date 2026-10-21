@@ -47,6 +47,18 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #loginFrame.shake{animation:nudge .35s}
 @keyframes nudge{20%{transform:translateX(-14px) rotate(-.4deg)}50%{transform:translateX(12px)}80%{transform:translateX(-6px)}}
 #loginBox{left:985px;top:1192px;width:1100px;height:160px}
+/* Caesar's head bops side to side in hard steps, like a pixel-game sprite */
+#loginHead{left:1080px;top:581px;width:911px;height:589px;transform-origin:50% 92%;animation:headBop .9s steps(1,end) infinite}
+@keyframes headBop{
+  0%{transform:translate(-26px,0) rotate(-10deg)}
+  16.6%{transform:translate(-12px,-22px) rotate(-5deg)}
+  33.3%{transform:translate(0,-34px) rotate(0deg)}
+  50%{transform:translate(26px,0) rotate(10deg)}
+  66.6%{transform:translate(12px,-22px) rotate(5deg)}
+  83.3%{transform:translate(0,-34px) rotate(0deg)}}
+#loginHead.hop{animation:headHop .16s steps(1,end)}
+@keyframes headHop{0%{transform:translate(0,-60px) scale(1.06,.94)}50%{transform:translate(0,-20px) scale(.96,1.05)}}
+@media (prefers-reduced-motion:reduce){#loginHead{animation:none}}
 #nameInput{position:absolute;left:1005px;top:1200px;width:1060px;height:144px;border:0;outline:0;background:transparent;
   font-family:var(--hand);font-size:92px;color:var(--ink);text-align:center;letter-spacing:.06em;padding:0 40px;caret-color:var(--ink)}
 #nameInput::placeholder{color:#b9b9bc;font-size:66px;letter-spacing:.08em}
@@ -202,6 +214,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
   <section id="login" class="layer">
     <div id="loginFrame" class="layer">
       <img class="sprite" data-m="login" alt="">
+      <img class="sprite" id="loginHead" src="assets/loginhead.png" alt="">
       <img class="sprite" id="loginBox" src="assets/loginbox.png" alt="">
       <button id="loginX" aria-label="Close"></button>
       <form id="loginForm" autocomplete="off">
@@ -525,7 +538,10 @@ function toggleRequest(){if(S.busy||S.win||S.locked||C.mode!=='desk')return;ac()
 
 /* ---------- 1. login ---------- */
 const nameInput=$('nameInput'),enterBtn=$('enterBtn');
-nameInput.addEventListener('input',()=>{enterBtn.disabled=!nameInput.value.trim();});
+nameInput.addEventListener('input',()=>{enterBtn.disabled=!nameInput.value.trim();
+  // a quick hop for every key typed, then back to the side-to-side bop
+  const h=$('loginHead');h.classList.remove('hop');void h.offsetWidth;h.classList.add('hop');});
+$('loginHead').addEventListener('animationend',e=>{if(e.animationName==='headHop')e.target.classList.remove('hop');});
 $('loginForm').addEventListener('submit',e=>{e.preventDefault();const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();startPrechat();});
 $('loginX').addEventListener('click',()=>{const f=$('loginFrame');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');sfx.close();});
 
@@ -777,7 +793,7 @@ function sparkle(){const A=APP[C.app];for(let i=0;i<16;i++){const s=document.cre
   $('desktop').appendChild(s);requestAnimationFrame(()=>{s.style.transform=`translate(${(Math.random()-.5)*200}px,${-80-Math.random()*160}px) scale(${.3+Math.random()}) rotate(90deg)`;s.style.opacity='0';});setTimeout(()=>s.remove(),1000);}}
 
 /* ---------- boot ---------- */
-const PRE=['background.jpg','login.png','loginbox.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png','crash0.jpg','crash1.jpg','crash2.jpg','crash3.jpg','crash4.jpg','crash5.jpg'];
+const PRE=['background.jpg','login.png','loginbox.png','loginhead.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png','crash0.jpg','crash1.jpg','crash2.jpg','crash3.jpg','crash4.jpg','crash5.jpg'];
 let n=0;PRE.forEach(f=>{const i=new Image();i.onload=i.onerror=()=>{if(++n===PRE.length){$('loading').remove();nameInput.focus({preventScroll:true});}};i.src='assets/'+f;});
 charMode('pre');setApp(1);requestAnimationFrame(frame);
 })();
