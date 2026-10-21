@@ -158,7 +158,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #stage.invert #shake{filter:invert(1) contrast(1.4)}
 #blackout{position:absolute;inset:0;background:#000;z-index:80;display:grid;place-items:center;color:#e8e8e8;font-family:var(--sys);font-size:72px;letter-spacing:.08em}
 #crashImg{position:absolute;inset:0;z-index:90;background:#fff}
-#crashImg img{width:100%;height:100%;object-fit:cover;max-width:none}
+#crashImg svg{width:100%;height:100%;display:block}
 #crashImg.in{animation:crashin .5s steps(5)}
 @keyframes crashin{0%{filter:invert(1)}40%{filter:none;transform:translateX(30px)}60%{filter:invert(1);transform:translateX(-30px)}100%{filter:none}}
 
@@ -224,7 +224,14 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
   <canvas id="noise" width="400" height="250"></canvas>
  </div>
  <div id="blackout" hidden></div>
- <div id="crashImg" hidden><img src="assets/crashing.jpg" alt="Caesar crashing"></div>
+ <div id="crashImg" hidden>
+  <!-- "boiling" pen lines, as in the earlier Caesar Game: turbulence displacement with a reseeded noise every 110ms -->
+  <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Caesar crashing">
+   <defs><filter id="boil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence id="turb" type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="2"/><feDisplacementMap in="SourceGraphic" scale="10"/></filter></defs>
+   <rect width="1600" height="900" fill="#fff"/>
+   <image href="assets/crashing.jpg" x="0" y="0" width="1600" height="900" preserveAspectRatio="xMidYMid slice" filter="url(#boil)"/>
+  </svg>
+ </div>
  <div id="loading">loading Caesar…</div>
 </div>
 </div>
@@ -486,6 +493,7 @@ function setNoise(op){nz.style.opacity=op;if(op>0&&!noiseOn){noiseOn=true;noiseL
 
 /* ---------- speech ---------- */
 let NAME='friend';
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let sayToken=0,skip=false;
 async function type(el,text,speed=30){const my=++sayToken;C.talk=true;skip=false;el.textContent='';
@@ -635,10 +643,11 @@ async function crashScreen(text){
   stage.classList.remove('tear','invert');setNoise(0);
   const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();await wait(text?900:250);
   const ci=$('crashImg');ci.hidden=false;ci.classList.remove('in');void ci.offsetWidth;ci.classList.add('in');bo.hidden=true;
+  const turb=$('turb'),boil=reduceMotion?0:setInterval(()=>turb.setAttribute('seed',String(1+Math.floor(Math.random()*9))),110);
   // reset the desktop behind the image while it shows
   $('popups').innerHTML='';clearFx();restoreChar();
   await wait(3000);
-  ci.hidden=true;
+  clearInterval(boil);ci.hidden=true;
 }
 function restoreChar(){const g=C.g;Object.assign(g,{a:0,tx:0,ty:0,va:0,target:null,twitch:0,hold:false,eyes:null,bounce:0});
   [1,2].forEach(n=>{E['neck'+n].removeAttribute('clip-path');['stump','torn','sockets'].forEach(k=>E[k+n].setAttribute('visibility','hidden'));});
