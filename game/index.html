@@ -93,7 +93,8 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 /* ---------- windows ---------- */
 #dim{position:absolute;inset:0;background:var(--dim);opacity:0;transition:opacity .25s;pointer-events:none;z-index:20}
 #dim.on{opacity:1;pointer-events:auto}
-.win{position:absolute;z-index:30;transform-origin:50% 50%;animation:pop .22s cubic-bezier(.3,1.4,.6,1)}
+.win{position:absolute;z-index:30;transform-origin:50% 50%;animation:pop .22s cubic-bezier(.3,1.4,.6,1);cursor:grab;touch-action:none}
+.win.moving{cursor:grabbing;animation:none;filter:drop-shadow(14px 22px 0 rgba(0,0,0,.35))}
 @keyframes pop{from{transform:scale(.86);opacity:0}}
 .win>img.frame{position:absolute;inset:0;width:100%;height:100%;max-width:none;pointer-events:none}
 .xbtn{position:absolute;border:0;background:transparent;cursor:pointer;padding:0;border-radius:6px}
@@ -150,7 +151,11 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #stage.invert #shake{filter:invert(1) contrast(1.4)}
 #blackout{position:absolute;inset:0;background:#000;z-index:80;display:grid;place-items:center;color:#e8e8e8;font-family:var(--sys);font-size:72px;letter-spacing:.08em}
 #crashImg{position:absolute;inset:0;z-index:90;background:#fff}
-#crashImg svg{width:100%;height:100%;display:block}
+#crashShake{position:absolute;inset:0;will-change:transform}
+#crashShake img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}
+/* colour flip: a white 'difference' layer inverts the picture without re-running the boil filter */
+#crashImg::after{content:"";position:absolute;inset:0;background:#fff;mix-blend-mode:difference;opacity:0;pointer-events:none}
+#crashImg.inv::after{opacity:1}
 #crashImg.in{animation:crashin .5s steps(5)}
 @keyframes crashin{0%{filter:invert(1)}40%{filter:none;transform:translateX(30px)}60%{filter:invert(1);transform:translateX(-30px)}100%{filter:none}}
 
@@ -216,13 +221,9 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
   <canvas id="noise" width="400" height="250"></canvas>
  </div>
  <div id="blackout" hidden></div>
- <div id="crashImg" hidden>
-  <!-- "boiling" pen lines, as in the earlier Caesar Game: turbulence displacement with a reseeded noise every 110ms -->
-  <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Caesar crashing">
-   <defs><filter id="boil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence id="turb" type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="2"/><feDisplacementMap in="SourceGraphic" scale="10"/></filter></defs>
-   <rect width="1600" height="900" fill="#fff"/>
-   <image href="assets/crashing.jpg" x="0" y="0" width="1600" height="900" preserveAspectRatio="xMidYMid slice" filter="url(#boil)"/>
-  </svg>
+ <div id="crashImg" hidden role="img" aria-label="Caesar crashing">
+  <!-- "boiling" pen lines, as in the earlier Caesar Game: six pre-distorted frames (game/tools/boil_frames.py) swapped every 110ms -->
+  <div id="crashShake"><img src="assets/crash0.jpg" alt=""><img src="assets/crash1.jpg" alt="" hidden><img src="assets/crash2.jpg" alt="" hidden><img src="assets/crash3.jpg" alt="" hidden><img src="assets/crash4.jpg" alt="" hidden><img src="assets/crash5.jpg" alt="" hidden></div>
  </div>
  <div id="loading">loading Caesar…</div>
 </div>
@@ -635,11 +636,17 @@ async function crashScreen(text){
   stage.classList.remove('tear','invert');setNoise(0);
   const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();await wait(text?900:250);
   const ci=$('crashImg');ci.hidden=false;ci.classList.remove('in');void ci.offsetWidth;ci.classList.add('in');bo.hidden=true;
-  const turb=$('turb'),boil=reduceMotion?0:setInterval(()=>turb.setAttribute('seed',String(1+Math.floor(Math.random()*9))),110);
+  const csvg=$('crashShake'),frames=[...csvg.children];let fi=0;
+  // boil the pen lines, shake the picture and keep flipping its colours for the whole 3 seconds
+  const boil=reduceMotion?0:setInterval(()=>{frames[fi].hidden=true;fi=(fi+1+Math.floor(Math.random()*4))%frames.length;frames[fi].hidden=false;},110);
+  const jolt=reduceMotion?0:setInterval(()=>{const m=Math.random()<.2?70:26;
+    csvg.style.transform=`translate(${(Math.random()-.5)*m}px,${(Math.random()-.5)*m}px) rotate(${(Math.random()-.5)*2.4}deg) scale(${1.05+Math.random()*.06})`;},45);
+  let flipT=0;const flip=()=>{ci.classList.toggle('inv');if(Math.random()<.4)sfx.glitch();flipT=setTimeout(flip,60+Math.random()*150);};
+  if(!reduceMotion)flip();
   // reset the desktop behind the image while it shows
   $('popups').innerHTML='';clearFx();restoreChar();
   await wait(3000);
-  clearInterval(boil);ci.hidden=true;
+  clearInterval(boil);clearInterval(jolt);clearTimeout(flipT);ci.classList.remove('inv');csvg.style.transform='';ci.hidden=true;
 }
 function restoreChar(){const g=C.g;Object.assign(g,{a:0,tx:0,ty:0,va:0,target:null,twitch:0,hold:false,eyes:null,bounce:0});
   [1,2].forEach(n=>{E['neck'+n].removeAttribute('clip-path');['stump','torn','sockets'].forEach(k=>E[k+n].setAttribute('visibility','hidden'));});
@@ -670,7 +677,15 @@ function mkWin(key,kind,xBox){const b=M[key],el=document.createElement('div');el
   const src=`assets/${key}.png`;
   el.innerHTML=`<img class="frame" src="${src}" alt="">`;
   const x=document.createElement('button');x.className='xbtn';x.setAttribute('aria-label','Close');place(x,[xBox[0]-b[0],xBox[1]-b[1],xBox[2],xBox[3]]);x.addEventListener('click',closeWin);el.appendChild(x);
-  $('wins').appendChild(el);S.win={el,kind};$('dim').classList.add('on');sfx.open();setTimeout(()=>x.focus({preventScroll:true}),50);return el;}
+  $('wins').appendChild(el);S.win={el,kind};$('dim').classList.add('on');sfx.open();setTimeout(()=>x.focus({preventScroll:true}),50);dragWin(el,b);return el;}
+// windows move like real desktop windows: grab anywhere except a button
+function dragWin(el,b){let st=null;
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;e.preventDefault();el.setPointerCapture(e.pointerId);
+    const p=toStage(e);st={px:p.x,py:p.y,x:parseFloat(el.style.left),y:parseFloat(el.style.top)};el.classList.add('moving');});
+  el.addEventListener('pointermove',e=>{if(!st)return;const p=toStage(e);
+    // keep at least 200px of the window on screen
+    const x=Math.min(3000,Math.max(200-b[2],st.x+p.x-st.px)),y=Math.min(1850,Math.max(0,st.y+p.y-st.py));el.style.left=x+'px';el.style.top=y+'px';});
+  const end=()=>{st=null;el.classList.remove('moving');};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);}
 function body(el,winKey,box,html,cls){const b=M[winKey],d=document.createElement('div');d.className='wbody '+(cls||'');place(d,[box[0]-b[0],box[1]-b[1],box[2],box[3]]);d.innerHTML=html;el.appendChild(d);return d;}
 function openWin(f){if(S.win||S.busy)return;f.el.classList.remove('hover');
   ({poster:openPoster,news:openNews,diary:openDiary,clothes:openClothes,poison:openPoison,photo:openPhoto})[f.win]();}
@@ -727,7 +742,7 @@ function sparkle(){const A=APP[C.app];for(let i=0;i<16;i++){const s=document.cre
   $('desktop').appendChild(s);requestAnimationFrame(()=>{s.style.transform=`translate(${(Math.random()-.5)*200}px,${-80-Math.random()*160}px) scale(${.3+Math.random()}) rotate(90deg)`;s.style.opacity='0';});setTimeout(()=>s.remove(),1000);}}
 
 /* ---------- boot ---------- */
-const PRE=['background.jpg','login.png','loginbox.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','crashing.jpg','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png'];
+const PRE=['background.jpg','login.png','loginbox.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png','crash0.jpg','crash1.jpg','crash2.jpg','crash3.jpg','crash4.jpg','crash5.jpg'];
 let n=0;PRE.forEach(f=>{const i=new Image();i.onload=i.onerror=()=>{if(++n===PRE.length){$('loading').remove();nameInput.focus({preventScroll:true});}};i.src='assets/'+f;});
 charMode('pre');setApp(1);requestAnimationFrame(frame);
 })();
