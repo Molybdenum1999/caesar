@@ -231,15 +231,16 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
   <clipPath id="cp1R"><rect x="707" y="459" width="37" height="84"/></clipPath>
   <clipPath id="cp2L"><rect x="529" y="508" width="36" height="82"/></clipPath>
   <clipPath id="cp2R"><rect x="662" y="476" width="50" height="104"/></clipPath>
-  <clipPath id="neckCut1"><path d="M400 2000 L400 700 L590 702 L605 686 L622 704 L640 684 L658 706 L676 688 L694 705 L712 690 L730 702 L1300 700 L1300 2000Z"/></clipPath>
+  <clipPath id="neckCut1"><path d="M400 2000 L400 700 L606 702 L617 686 L629 704 L642 684 L654 706 L667 688 L679 705 L692 690 L705 702 L1300 700 L1300 2000Z"/></clipPath>
   <clipPath id="neckCut2"><path d="M500 2000 L500 712 L676 714 L692 698 L712 718 L732 696 L752 716 L772 700 L792 718 L812 700 L832 714 L1000 712 L1000 2000Z"/></clipPath>
   <radialGradient id="socket"><stop offset="0" stop-color="#000"/><stop offset=".75" stop-color="#0b0707"/><stop offset="1" stop-color="#2a1616"/></radialGradient>
  </defs>
 
  <!-- appearance 1 : head > bunches > body > neck -->
  <g id="A1">
-  <g id="neckG1"><image id="neck1" href="assets/neck1.png" x="892" y="762" width="378" height="508" transform="translate(-435 -206)"/></g>
-  <g id="stump1" visibility="hidden">
+  <!-- neck narrowed to match the beauty.png reference: x' = 645 + 0.7(x - 1081) -->
+  <g id="neckG1"><g id="neck1"><image href="assets/neck1.png" x="892" y="762" width="378" height="508" transform="translate(645 -206) scale(0.7 1) translate(-1081 0)"/></g></g>
+  <g id="stump1" visibility="hidden" transform="translate(645 0) scale(0.7 1) translate(-646 0)">
     <path d="M590 702 L605 686 L622 704 L640 684 L658 706 L676 688 L694 705 L712 690 L730 702 L716 716 L600 716Z" fill="#0b0707" stroke="#141414" stroke-width="5"/>
     <path class="cable" d="M615 698 C 600 650, 640 640, 628 600" fill="none" stroke="#141414" stroke-width="9" stroke-linecap="round"/>
     <path class="cable" d="M662 696 C 690 650, 650 630, 676 590" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
@@ -249,7 +250,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
   <g id="headG1">
    <g id="tailL1"><image href="assets/tailL.png" x="184" y="133" width="356" height="758"/></g>
    <g id="tailR1"><image href="assets/tailR.png" x="756" y="136" width="336" height="715"/></g>
-   <g id="torn1" visibility="hidden">
+   <g id="torn1" visibility="hidden" transform="translate(645 0) scale(0.7 1) translate(-646 0)">
      <path d="M600 680 L598 742 L612 728 L626 750 L640 730 L656 752 L670 732 L686 748 L700 726 L704 680Z" fill="#fff" stroke="#141414" stroke-width="5" stroke-linejoin="round"/>
      <path d="M603 735 L612 728 L626 750 L640 730 L656 752 L670 732 L686 748 L700 726 L700 738 L686 760 L670 744 L656 764 L640 742 L626 762 L612 742Z" fill="#0b0707"/>
      <path d="M630 752 C 626 800, 650 820, 640 860 M668 748 C 680 790, 660 812, 676 850" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
