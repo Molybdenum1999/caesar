@@ -48,16 +48,17 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 @keyframes nudge{20%{transform:translateX(-14px) rotate(-.4deg)}50%{transform:translateX(12px)}80%{transform:translateX(-6px)}}
 #loginBox{left:985px;top:1192px;width:1100px;height:160px}
 /* Caesar's head bops side to side in hard steps, like a pixel-game sprite */
-#loginHead{left:1080px;top:581px;width:911px;height:589px;transform-origin:50% 92%;animation:headBop .9s steps(1,end) infinite}
+#loginHead{left:1080px;top:581px;width:911px;height:589px;transform-origin:416px 425px;animation:headBop .9s steps(1,end) infinite}
+/* pivot = Caesar's nose (1496,1006 in the login art) */
 @keyframes headBop{
-  0%{transform:translate(-26px,0) rotate(-10deg)}
-  16.6%{transform:translate(-12px,-22px) rotate(-5deg)}
-  33.3%{transform:translate(0,-34px) rotate(0deg)}
-  50%{transform:translate(26px,0) rotate(10deg)}
-  66.6%{transform:translate(12px,-22px) rotate(5deg)}
-  83.3%{transform:translate(0,-34px) rotate(0deg)}}
+  0%{transform:translate(-8px,0) rotate(-5deg)}
+  16.6%{transform:translate(-4px,-8px) rotate(-2.5deg)}
+  33.3%{transform:translate(0,-12px) rotate(0deg)}
+  50%{transform:translate(8px,0) rotate(5deg)}
+  66.6%{transform:translate(4px,-8px) rotate(2.5deg)}
+  83.3%{transform:translate(0,-12px) rotate(0deg)}}
 #loginHead.hop{animation:headHop .16s steps(1,end)}
-@keyframes headHop{0%{transform:translate(0,-60px) scale(1.06,.94)}50%{transform:translate(0,-20px) scale(.96,1.05)}}
+@keyframes headHop{0%{transform:translate(0,-26px) scale(1.04,.96)}50%{transform:translate(0,-8px) scale(.98,1.03)}}
 @media (prefers-reduced-motion:reduce){#loginHead{animation:none}}
 #nameInput{position:absolute;left:1005px;top:1200px;width:1060px;height:144px;border:0;outline:0;background:transparent;
   font-family:var(--hand);font-size:92px;color:var(--ink);text-align:center;letter-spacing:.06em;padding:0 40px;caret-color:var(--ink)}
