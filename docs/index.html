@@ -82,6 +82,9 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 
 /* ---------- desktop ---------- */
 #chatS{position:absolute;left:730px;top:1296px;width:1040px;height:140px;font-size:50px;line-height:1.36;overflow:hidden}
+/* click Caesar or her chat box to see the upload request again */
+.ask{position:absolute;border:0;padding:0;background:transparent;cursor:pointer}
+.ask:focus-visible{outline:6px dashed var(--paper);outline-offset:-10px}
 #deskNext{left:1726px;top:1400px;width:38px;height:50px}
 .file{position:absolute;cursor:grab;transition:transform .16s ease;touch-action:none}
 .file img{position:absolute;top:0;max-width:none;pointer-events:none;-webkit-user-drag:none}
@@ -226,6 +229,8 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
     <img class="sprite" id="prog" src="assets/prog0.png" alt="0 of 3 uploaded">
     <img class="sprite" data-m="chats" alt="">
     <div id="chatS" aria-live="polite"></div>
+    <button class="ask" id="askChar" style="left:196px;top:141px;width:905px;height:1023px" aria-label="Ask Caesar what to upload"></button>
+    <button class="ask" id="askChat" style="left:693px;top:1164px;width:1117px;height:306px" aria-label="Ask Caesar what to upload"></button>
     <img class="next" id="deskNext" src="assets/arrowR.png" hidden alt="">
     <div id="files"></div>
     <div id="dim"></div>
@@ -509,7 +514,14 @@ let sayToken=0,skip=false;
 async function type(el,text,speed=30){const my=++sayToken;C.talk=true;skip=false;el.textContent='';
   for(let i=0;i<text.length;i++){if(my!==sayToken)return false;if(skip){el.textContent=text;break;}el.textContent+=text[i];if(i%2===0&&text[i]!==' ')sfx.blip();await wait(text[i]===','||text[i]==='.'?speed*5:speed);}
   if(my===sayToken)C.talk=false;return true;}
-function sayS(text,speed){return type($('chatS'),text,speed);}
+let lastLine='';
+function sayS(text,speed){lastLine=text;reqShown=false;return type($('chatS'),text,speed);}
+// Caesar / chat box toggle between her upload request and what she said last
+const REQUEST=()=>`Upload three things for me: two for who I am, and one for who made me.`;
+let reqShown=false;
+function toggleRequest(){if(S.busy||S.win||S.locked||C.mode!=='desk')return;ac();sfx.blip();
+  const back=lastLine;reqShown=!reqShown;type($('chatS'),reqShown?REQUEST():back,20).then(()=>{lastLine=back;});C.g.bounce=12;}
+['askChar','askChat'].forEach(id=>$(id).addEventListener('click',toggleRequest));
 
 /* ---------- 1. login ---------- */
 const nameInput=$('nameInput'),enterBtn=$('enterBtn');
