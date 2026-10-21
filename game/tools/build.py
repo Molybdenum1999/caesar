@@ -163,3 +163,11 @@ save(btn,'btn4',scale=0.5)
 w4[y0:y1,x0:x1][ndimage.binary_dilation(oval,iterations=4)]=[255,255,255,255]
 save(w4,'win4',scale=0.5)
 json.dump(META,open(OUT+'meta.json','w'),indent=1)
+# ---- login: lift the hand-drawn name box out of the frame so it can be re-centred under Caesar ----
+lg=fillholes(despeck(load('login page.png'),200))
+bx=(966,1230,2118,1458); x0,y0,x1,y1=bx
+sp=np.zeros_like(lg); sp[y0:y1,x0:x1]=lg[y0:y1,x0:x1]
+d=dark(sp); sp[~d]=0; save(sp,'loginbox',scale=0.6)
+lg[y0:y1,x0:x1]=[255,255,255,255]
+save(lg,'login',scale=0.6)
+json.dump(META,open(OUT+'meta.json','w'),indent=1)
