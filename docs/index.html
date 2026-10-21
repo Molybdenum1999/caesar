@@ -128,6 +128,15 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 .diary .date{font-size:86px;letter-spacing:.04em;text-decoration:underline;text-decoration-thickness:4px;text-underline-offset:12px;margin-bottom:var(--lh)}
 .diary p{margin:0}
 .diary .entry{margin-bottom:var(--lh)}
+/* Nanum Pen Script has a single weight, so bold is drawn as a thicker pen stroke */
+.diary strong{font-weight:400;-webkit-text-stroke:2.4px currentColor}
+.diary.isCover{background:none}
+.diary .cover{height:100%;flex-direction:column;align-items:center;justify-content:center;gap:56px;text-align:center}
+.diary .cover.on{display:flex}
+.diary .label{position:relative;padding:70px 110px 80px}
+.diary .label svg.rr{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.diary .cover h2{position:relative;margin:0;font-weight:400;font-size:210px;line-height:1;letter-spacing:.02em}
+.diary .cover .years{font-size:76px;line-height:1;color:var(--graphite);letter-spacing:.08em}
 .arrow{position:absolute;border:0;background:transparent;cursor:pointer;padding:0;transition:transform .15s}
 .arrow img{width:100%;height:100%;max-width:none;pointer-events:none}
 .arrow:hover,.arrow:focus-visible{transform:scale(1.1);outline:none}
@@ -542,7 +551,7 @@ const FILES=[
  {id:'file4',label:'File 4',win:'clothes',ok:false},
  {id:'file5',label:'File 555',win:'poison',ok:false,poison:true},
  {id:'img',label:'IMG_222',win:'photo',ok:true}];
-const S={progress:0,uploaded:new Set(),busy:false,win:null,diary:{page:0,seen:new Set([0]),warned:false}};
+const S={progress:0,uploaded:new Set(),busy:false,win:null,diary:{page:-1,seen:new Set(),warned:false}};
 async function goDesktop(){
   $('prechat').hidden=true;$('desktop').hidden=false;charMode('desk');buildFiles();
   S.busy=true;
@@ -714,19 +723,25 @@ const DIARY=[
   ['3039.12.4',"Some stuff happened last night, and okay, I don't dislike her that much now. Today, we decided her name is Caesar. I absolutely love it because of Julius Caesar."]],
  [['3040.3.21',"People's feelings about robots are flipping. Everyone wants them out of their lives now. I thought it was nothing, but after that rally the other day… God, I'm so scared for Caesar. If you want to destroy them, why create them at all?"],
   ['3040.4.5',"We have to leave"]],
- [['3040.8.20',"I can finally bring myself to write this after a few days.\nI made an AI program just to speak to Caesar again. Caesar died on August 13. Her serial number is xm813. Was this fate all along?\nThe government ordered the destruction of all robots. People grew overly reliant on them, lost and discouraged. And honestly, they were right. But still, I can't accept that she's gone.\nWe were almost across the border when they caught us. To save me while I was unconscious, Caesar gave herself up to them. Her chip was handed back to me, crushed and broken, most of her memories wiped.\nThis AI Caesar doesn't know who I am. I don't have words for this.\nHow am I supposed to live without you?"]]];
+ [['3040.8.20',"I can finally bring myself to write this after a few days.\n**I made an AI program just to speak to Caesar again.** Caesar died on August 13. Her serial number is xm813. Was this fate all along?\nThe government ordered the destruction of all robots. People grew overly reliant on them, lost and discouraged. And honestly, they were right. But still, I can't accept that she's gone.\nWe were almost across the border when they caught us. To save me while I was unconscious, Caesar gave herself up to them. Her chip was handed back to me, crushed and broken, most of her memories wiped.\nThis AI Caesar doesn't know who I am. I don't have words for this.\nHow am I supposed to live without you?"]]];
 function openDiary(){const el=mkWin('win3','diary',[1160,58,104,96]);const D=S.diary;
   const pg=body(el,'win3',[1290,170,1500,1500],'','diary');
-  DIARY.forEach((entries,i)=>{const p=document.createElement('div');p.className='page';
+  // cover (page -1), then the three diary pages
+  const cv=document.createElement('div');cv.className='page cover';
+  cv.innerHTML=`<div class="label">${roughSVG(900,360,3039,8)}<h2>IDA's Diary</h2></div><div class="years">3039 – 3040</div>`;
+  pg.appendChild(cv);
+  DIARY.forEach(entries=>{const p=document.createElement('div');p.className='page';
     entries.forEach(([d,t])=>{const e=document.createElement('div');e.className='entry';const h=document.createElement('div');h.className='date';h.textContent=d;e.appendChild(h);
-      t.split('\n').forEach(par=>{const q=document.createElement('p');q.textContent=par;e.appendChild(q);});p.appendChild(e);});
+      // **text** marks a sentence Ida pressed hard on
+      t.split('\n').forEach(par=>{const q=document.createElement('p');par.split('**').forEach((bit,k)=>{if(!bit)return;if(k%2){const b=document.createElement('strong');b.textContent=bit;q.appendChild(b);}else q.appendChild(document.createTextNode(bit));});e.appendChild(q);});p.appendChild(e);});
     pg.appendChild(p);});
   const b=M.win3;
   const mkA=(k,dir)=>{const a=document.createElement('button');a.className='arrow';a.setAttribute('aria-label',dir<0?'Previous page':'Next page');
-    place(a,[M[k][0]-b[0],M[k][1]-b[1],M[k][2],M[k][3]]);a.innerHTML=`<img src="assets/${k}.png" alt="">`;a.addEventListener('click',()=>{D.page=Math.max(0,Math.min(2,D.page+dir));D.seen.add(D.page);sfx.open();render();});el.appendChild(a);return a;};
+    place(a,[M[k][0]-b[0],M[k][1]-b[1],M[k][2],M[k][3]]);a.innerHTML=`<img src="assets/${k}.png" alt="">`;a.addEventListener('click',()=>{D.page=Math.max(-1,Math.min(2,D.page+dir));if(D.page>=0)D.seen.add(D.page);sfx.open();render();});el.appendChild(a);return a;};
   const L=mkA('arrowL',-1),R=mkA('arrowR',1);
   const no=document.createElement('div');no.id='pageNo';place(no,[2400-b[0],1712-b[1],170,90]);el.appendChild(no);
-  function render(){[...pg.children].forEach((p,i)=>p.classList.toggle('on',i===D.page));L.hidden=D.page===0;R.hidden=D.page===2;no.textContent=`${D.page+1}/3`;
+  function render(){[...pg.children].forEach((p,i)=>p.classList.toggle('on',i===D.page+1));L.hidden=D.page===-1;R.hidden=D.page===2;no.textContent=D.page<0?'':`${D.page+1}/3`;
+    pg.classList.toggle('isCover',D.page<0);
     // the last page is the longest entry, so it uses tighter ruling
     pg.style.setProperty('--lh',D.page===2?'80px':'96px');pg.style.fontSize=D.page===2?'64px':'';}
   render();}
