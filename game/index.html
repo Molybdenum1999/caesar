@@ -105,6 +105,20 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #uploadBox.over{transform:scale(1.05) rotate(-1deg)}
 #uploadBox img{position:absolute;inset:0;width:100%;height:100%}
 #prog{position:absolute;left:1100px;top:1030px;width:620px;height:130px}
+#uploadBox,#prog{transition:opacity .6s ease,transform .15s}
+#uploadBox.gone,#prog.gone{opacity:0;pointer-events:none}
+#charSvg.slide{transition:transform 1.2s cubic-bezier(.5,0,.2,1)}
+/* step 3: Caesar asks for her maker's name; answered here instead of by upload */
+#answerForm{position:absolute;left:720px;top:1486px;width:1170px;height:110px;animation:pop .35s cubic-bezier(.3,1.4,.6,1)}
+#answerForm[hidden]{display:none}
+#answerBox{left:0;top:0;width:920px;height:110px;background:var(--paper)}
+#answerInput{position:absolute;left:18px;top:6px;width:884px;height:98px;border:0;outline:0;background:transparent;font-family:var(--hand);font-size:62px;color:var(--ink);text-align:center;letter-spacing:.06em;caret-color:var(--ink)}
+#answerInput::placeholder{color:#b9b9bc;font-size:50px}
+#answerBtn{position:absolute;left:950px;top:7px;width:220px;height:96px;border:0;background:transparent;cursor:pointer;padding:0;font-family:var(--hand);font-size:52px;color:var(--ink);letter-spacing:.1em;transition:transform .15s}
+#answerBtn svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#answerBtn span{position:relative}
+#answerBtn:hover,#answerBtn:focus-visible{transform:scale(1.07) rotate(-1deg);outline:none}
+#answerForm.no{animation:nudge .35s}
 
 /* ---------- windows ---------- */
 #dim{position:absolute;inset:0;background:var(--dim);opacity:0;transition:opacity .25s;pointer-events:none;z-index:20}
@@ -238,6 +252,11 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
     <button class="ask" id="askChar" style="left:196px;top:141px;width:905px;height:1023px" aria-label="Ask Caesar what to upload"></button>
     <button class="ask" id="askChat" style="left:693px;top:1164px;width:1117px;height:306px" aria-label="Ask Caesar what to upload"></button>
     <img class="next" id="deskNext" src="assets/arrowR.png" hidden alt="">
+    <form id="answerForm" autocomplete="off" hidden>
+      <img class="sprite" id="answerBox" src="assets/loginbox.png" alt="">
+      <input id="answerInput" maxlength="20" placeholder="type a name" aria-label="Who made Caesar?" spellcheck="false">
+      <button id="answerBtn" type="submit"><svg data-rough="220,96,27,6" aria-hidden="true"></svg><span>ENTER</span></button>
+    </form>
     <div id="files"></div>
     <div id="dim"></div>
     <div id="wins"></div>
@@ -418,7 +437,8 @@ const PRE_BIG={s:2.7,tx:1600-640*2.7,ty:1000-470*2.7,clip:'inset(0px 0px 0px 0px
 const PRE_FIT={s:1.43,tx:200,ty:15,clip:'inset(182px 455px 134px 446px)'};
 let PRE_XF=PRE_FIT;
 function preView(v){PRE_XF=v;E.charSvg.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.s})`;charBox.style.clipPath=v.clip;}
-function charToStage(p){return C.mode==='pre'?{x:p[0]*PRE_XF.s+PRE_XF.tx,y:p[1]*PRE_XF.s+PRE_XF.ty}:{x:p[0],y:p[1]};}
+function charToStage(p){return C.mode==='pre'?{x:p[0]*PRE_XF.s+PRE_XF.tx,y:p[1]*PRE_XF.s+PRE_XF.ty}:{x:p[0]+DESK_DX,y:p[1]};}
+let DESK_DX=0; // desktop: how far Caesar has slid right (358 = centred in her window)
 function setApp(n){C.app=n;E.A1.setAttribute('display',n===1?'inline':'none');E.A2.setAttribute('display',n===2?'inline':'none');}
 function setSmile(on){C.smile=on;if(C.app!==1)return;E.head1.setAttribute('href',on?'assets/hsmile.png':'assets/head1.png');
   E.eyes1.setAttribute('visibility',on?'hidden':'visible');E.mouth1.setAttribute('visibility',on?'hidden':'visible');}
@@ -523,7 +543,7 @@ async function type(el,text,speed=30){const my=++sayToken;C.talk=true;skip=false
 let lastLine='';
 function sayS(text,speed){lastLine=text;reqShown=false;return type($('chatS'),text,speed);}
 // Caesar / chat box toggle between her upload request and what she said last
-const REQUEST=()=>`Upload three things for me: two for who I am, and one for who made me.`;
+const REQUEST=()=>STEP_LINES()[S.step];
 let reqShown=false;
 function toggleRequest(){if(S.busy||S.win||S.locked||C.mode!=='desk')return;ac();sfx.blip();
   const back=lastLine;reqShown=!reqShown;type($('chatS'),reqShown?REQUEST():back,20).then(()=>{lastLine=back;});C.g.bounce=12;}
@@ -540,10 +560,7 @@ $('loginX').addEventListener('click',()=>{const f=$('loginFrame');f.classList.re
 
 /* ---------- 2. welcome ---------- */
 const LINES=()=>[`Hi, ${NAME}, I'm Caesar, and I was AI-designed many years ago.`,
- `I lost almost all my memories, as the data comes from a broken chip. And I have never been repaired.`,
- `I want to know who I am, and who made me.`,
- `This computer already has some information on the desktop that could possibly recall my memory. Could you please upload it to me?`,
- `Remember, upload the correct one.`];
+ `I lost my memories; please fix me.`];
 let preDone=false;
 async function startPrechat(){
   $('login').hidden=true;$('prechat').hidden=false;charMode('pre');setApp(1);preView(PRE_BIG);
@@ -566,18 +583,24 @@ $('prechat').addEventListener('click',()=>{ac();if(preDone)return;if(C.talk)skip
 
 /* ---------- 3. desktop ---------- */
 const FILES=[
- {id:'file1',label:'File 1',win:'poster',ok:true},
- {id:'file2',label:'File 2',win:'news',ok:false},
- {id:'file3',label:'#@8!3',win:'diary',ok:true},
- {id:'file4',label:'File 4',win:'clothes',ok:false},
- {id:'file5',label:'File 555',win:'poison',ok:false,poison:true},
- {id:'img',label:'IMG_222',win:'photo',ok:true}];
-const S={progress:0,uploaded:new Set(),busy:false,win:null,diary:{page:-1,seen:new Set(),warned:false}};
+ {id:'file1',label:'File 1',win:'poster'},
+ {id:'file2',label:'File 2',win:'news'},
+ {id:'file3',label:'#@8!3',win:'diary'},
+ {id:'file4',label:'File 4',win:'clothes'},
+ {id:'file5',label:'File 555',win:'poison',poison:true},
+ {id:'img',label:'IMG_222',win:'photo'}];
+// the order Caesar needs things in: step 0 = File 1, step 1 = #@8!3 (Ida's diary), step 2 = type her maker's name
+const NEED=['file1','file3'];
+const ANSWER='ida';
+const STEP_LINES=()=>[
+ `I remember that at first I wasn't an AI. Then, who am I? Could you please find the hints and show me?`,
+ `So... I had a physical form long ago. Then why have I become this? I need to know what happened in between.`,
+ `Finally, I guess you already know who made me. Can you type their name here?`];
+const S={step:0,progress:0,uploaded:new Set(),busy:false,win:null,diary:{page:-1,seen:new Set(),warned:false}};
 async function goDesktop(){
   $('prechat').hidden=true;$('desktop').hidden=false;charMode('desk');buildFiles();
   S.busy=true;
-  await wait(400);await sayS(`Overall, you should upload three things.`);await wait(1300);
-  await sayS(`Two for who I am, one for who made me.`);await wait(1500);
+  await wait(400);await sayS(STEP_LINES()[0]);await wait(2200);
   await sayS(`Drag a file into the upload box. Double-click a file to look inside.`);
   S.busy=false;
 }
@@ -588,7 +611,7 @@ function buildFiles(){const box=$('files');box.innerHTML='';
     el.innerHTML=`<img class="closed${hasOpen?' hasopen':''}" src="assets/${f.id}.png" style="left:0;width:${b[2]}px;height:${b[3]}px" alt="">`+
       (hasOpen?`<img class="open" src="assets/${f.id}_open.png" style="left:-40px;width:${b[2]+80}px;height:${b[3]}px" alt="">`:'');
     f.el=el;box.appendChild(el);bindFile(f);});}
-function overUpload(p){return p.x>1090&&p.x<1730&&p.y>210&&p.y<1030;}
+function overUpload(p){return S.step<NEED.length&&p.x>1090&&p.x<1730&&p.y>210&&p.y<1030;}
 function bindFile(f){const el=f.el;let st=null,lastTap=0;
   el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'&&!S.win)el.classList.add('hover');});
   el.addEventListener('pointerleave',()=>{if(!st||!st.drag)el.classList.remove('hover');});
@@ -607,19 +630,38 @@ function bindFile(f){const el=f.el;let st=null,lastTap=0;
 
 /* ---------- upload outcomes ---------- */
 async function upload(f){
-  if(S.busy||S.win)return;
+  if(S.busy||S.win||S.step>=NEED.length)return;
+  if(S.uploaded.has(f.id)){S.busy=true;await sayS(`I already have that one, ${NAME}.`);await wait(1400);await sayS(REQUEST());S.busy=false;return;}
   if(f.poison)return poison();
-  if(!f.ok)return overload(f);
-  if(S.uploaded.has(f.id)){S.busy=true;await sayS(`I already have that one, ${NAME}. Find something else.`);S.busy=false;return;}
-  S.busy=true;S.uploaded.add(f.id);S.progress++;f.el.classList.add('done');
-  $('uploadImg').src='assets/success.png';$('prog').src=`assets/prog${S.progress}.png`;$('prog').alt=`${S.progress} of 3 uploaded`;
+  // anything other than the file this step needs makes her crash
+  if(f.id!==NEED[S.step])return overload(f);
+  S.busy=true;S.uploaded.add(f.id);S.progress++;S.step++;f.el.classList.add('done');
+  $('uploadImg').src='assets/success.png';$('prog').src=`assets/prog${S.progress}.png`;$('prog').alt=`${S.progress} of 3 done`;
   sfx.ok();setSmile(true);C.g.bounce=26;
-  await sayS(`Great! You uploaded the correct one!`);await wait(1400);
+  await sayS(STEP_LINES()[S.step]);await wait(900);
   $('uploadImg').src='assets/upload.png';setSmile(false);
-  if(S.progress>=3){winpart();return;}
-  const hints={file1:`That poster... XM-813. Is that me?`,file3:`Ida... that name feels warm.`,img:`I took this picture. I remember her back.`};
-  await sayS(hints[f.id]);S.busy=false;
+  if(S.step===NEED.length)await askName();
+  S.busy=false;
 }
+// step 3: no more uploads; Caesar moves to the middle of her window and waits for a typed name
+async function askName(){
+  $('uploadBox').classList.add('gone');$('prog').classList.add('gone');
+  E.charSvg.classList.add('slide');DESK_DX=358;E.charSvg.style.transform=`translate(${DESK_DX-196}px,-141px)`;
+  $('askChar').style.width='1604px';
+  await wait(1200);E.charSvg.classList.remove('slide');
+  $('answerForm').hidden=false;$('answerInput').focus({preventScroll:true});
+}
+$('answerForm').addEventListener('submit',async e=>{e.preventDefault();
+  const v=$('answerInput').value.trim();if(!v||S.busy)return;ac();
+  if(v.toLowerCase()===ANSWER){
+    S.busy=true;S.progress=3;$('answerInput').disabled=true;$('answerBtn').disabled=true;
+    sfx.ok();setSmile(true);C.g.bounce=30;
+    await sayS(`Ida... I remember now.`);await wait(1400);
+    winpart();return;}
+  const f=$('answerForm');f.classList.remove('no');void f.offsetWidth;f.classList.add('no');sfx.glitch();
+  S.busy=true;await sayS(`No... that name doesn't feel right. Try again.`);S.busy=false;
+  $('answerInput').select();
+});
 
 /* NEEDY-STREAMER-OVERLOAD style meltdown for a wrong file */
 const POP_TXT=['WHO AM I','WHO AM I','who am i','THAT\'S NOT ME','caesar.exe is not responding','MEMORY CORRUPTED','ERROR 0x813','don\'t look at me','I\'m fine','I\'m fine I\'m fine I\'m fine','DATA LOST','why why why','please','SYSTEM OVERLOAD','where did you go','{n}?','{n} {n} {n}','STOP','i hate this','404 : self not found'];
@@ -692,7 +734,7 @@ function restoreChar(){const g=C.g;Object.assign(g,{a:0,tx:0,ty:0,va:0,target:nu
 async function resetAfterCrash(line){
   // progress stays where it was before the bad upload
   $('prog').src=`assets/prog${S.progress}.png`;$('uploadImg').src='assets/upload.png';
-  S.locked=false;await wait(300);await sayS(line);S.busy=false;}
+  S.locked=false;await wait(300);await sayS(line);await wait(1500);await sayS(REQUEST());S.busy=false;}
 
 /* ---------- WINPART ----------
    Placeholder for the ending animation. Replace the body of winpart() when the real ending is ready. */
