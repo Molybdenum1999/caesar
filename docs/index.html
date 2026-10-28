@@ -96,7 +96,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 /* ---------- desktop ---------- */
 #chatS{position:absolute;left:730px;top:1292px;width:1040px;height:152px;font-size:50px;line-height:1.36;overflow:hidden}
 /* click Caesar or her chat box to see the upload request again */
-.ask{position:absolute;border:0;padding:0;background:transparent;cursor:pointer}
+.ask{position:absolute;border:0;padding:0;background:transparent;cursor:pointer;touch-action:none;-webkit-touch-callout:none}
 .ask:focus-visible{outline:6px dashed var(--paper);outline-offset:-10px}
 #deskNext{left:1726px;top:1400px;width:38px;height:50px}
 .file{position:absolute;cursor:grab;transition:transform .16s ease;touch-action:none}
@@ -200,6 +200,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #crashImg{position:absolute;inset:0;z-index:90;background:#fff}
 #crashShake{position:absolute;inset:0;will-change:transform}
 #crashShake img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}
+#crashShake .cset{position:absolute;inset:0}
 /* colour flip: a white 'difference' layer inverts the picture without re-running the boil filter */
 #crashImg::after{content:"";position:absolute;inset:0;background:#fff;mix-blend-mode:difference;opacity:0;pointer-events:none}
 #crashImg.inv::after{opacity:1}
@@ -218,6 +219,9 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #endFlash,#endFlash2{position:absolute;left:0;top:0;width:3200px;height:2000px;object-fit:cover;max-width:none;pointer-events:none}
 #endFlash2{opacity:.55;mix-blend-mode:difference}
 #endCv{position:absolute;inset:0;width:3200px;height:2000px}
+/* last screen: almost pure black with c3 multiplied in, barely visible */
+#titleDark{background:#050505}
+#titleDark img{width:3200px;height:2000px;object-fit:cover;max-width:none;filter:invert(1);opacity:.1}
 #titleCap{left:600px;width:1940px;top:1665px;font-size:92px;-webkit-text-stroke:12px var(--ink)}
 #rotate{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;color:#bbb;font-family:var(--hand);font-size:15px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 @media (prefers-reduced-motion:reduce){#stage.tear #shake{animation:none}.next{animation:none}}
@@ -230,6 +234,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 
   <!-- 1. LOGIN -->
   <section id="login" class="layer">
+    <div id="titleDark" class="layer" hidden><img src="assets/end_c3.jpg" alt=""></div>
     <div id="loginFrame" class="layer">
       <img class="sprite" data-m="login" alt="">
       <img class="sprite" id="loginHead" src="assets/loginhead.png" alt="">
@@ -297,7 +302,10 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
  <div id="blackout" hidden></div>
  <div id="crashImg" hidden role="img" aria-label="Caesar crashing">
   <!-- "boiling" pen lines, as in the earlier Caesar Game: six pre-distorted frames (game/tools/boil_frames.py) swapped every 110ms -->
-  <div id="crashShake"><img src="assets/crash0.jpg" alt=""><img src="assets/crash1.jpg" alt="" hidden><img src="assets/crash2.jpg" alt="" hidden><img src="assets/crash3.jpg" alt="" hidden><img src="assets/crash4.jpg" alt="" hidden><img src="assets/crash5.jpg" alt="" hidden></div>
+  <div id="crashShake">
+   <div class="cset" data-set="crash"><img src="assets/crash0.jpg" alt=""><img src="assets/crash1.jpg" alt="" hidden><img src="assets/crash2.jpg" alt="" hidden><img src="assets/crash3.jpg" alt="" hidden><img src="assets/crash4.jpg" alt="" hidden><img src="assets/crash5.jpg" alt="" hidden></div>
+   <div class="cset" data-set="c4" hidden><img src="assets/c4boil0.jpg" alt=""><img src="assets/c4boil1.jpg" alt="" hidden><img src="assets/c4boil2.jpg" alt="" hidden><img src="assets/c4boil3.jpg" alt="" hidden><img src="assets/c4boil4.jpg" alt="" hidden><img src="assets/c4boil5.jpg" alt="" hidden></div>
+  </div>
  </div>
  <div id="loading">loading Caesar…</div>
 </div>
@@ -339,6 +347,11 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
      <path d="M630 752 C 626 800, 650 820, 640 860 M668 748 C 680 790, 660 812, 676 850" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"/>
    </g>
    <image id="head1" href="assets/head1.png" x="436" y="198" width="407" height="610"/>
+   <g id="tailWound1" visibility="hidden" fill="#0b0707" stroke="#141414" stroke-width="5" stroke-linejoin="round">
+     <path d="M470 236 L486 250 L478 262 L496 270 L484 286 L500 300 L476 304 L462 280 Z"/>
+     <path d="M808 232 L792 248 L802 260 L784 270 L798 286 L780 300 L806 302 L820 278 Z"/>
+     <path d="M482 300 C 480 340, 492 360, 486 392 M796 300 C 800 336, 788 360, 794 398" fill="none" stroke-width="9" stroke-linecap="round"/>
+   </g>
    <g id="eyes1">
     <g clip-path="url(#cp1L)"><image id="p1L" href="assets/head1_pupil0.png" x="539" y="467" width="25" height="69"/></g>
     <g clip-path="url(#cp1R)"><image id="p1R" href="assets/head1_pupil1.png" x="713" y="465" width="23" height="75"/></g>
@@ -461,7 +474,7 @@ const sfx={
 
 /* ---------- character ---------- */
 const charBox=$('charTpl').content.firstElementChild.cloneNode(true);
-const E={};['A1','A2','headG1','headG2','bodyG1','bodyG2','neckG1','neckG2','neck1','neck2','tailL1','tailR1','head1','p1L','p1R','p2L','p2R','mouth1','mouth2','blink1','blink2','eyes1','eyes2','stump1','stump2','torn1','torn2','sockets1','sockets2','eyeballs','cordL','cordR','ballL','ballR','ballLp','ballRp','charSvg','grin1','warpMap','warpTurb'].forEach(k=>E[k]=charBox.querySelector('#'+k));
+const E={};['A1','A2','headG1','headG2','bodyG1','bodyG2','neckG1','neckG2','neck1','neck2','tailL1','tailR1','head1','p1L','p1R','p2L','p2R','mouth1','mouth2','blink1','blink2','eyes1','eyes2','stump1','stump2','torn1','torn2','sockets1','sockets2','eyeballs','cordL','cordR','ballL','ballR','ballLp','ballRp','charSvg','grin1','warpMap','warpTurb','tailWound1'].forEach(k=>E[k]=charBox.querySelector('#'+k));
 // pupil centres, for shrinking them to pinpricks in the ending
 const PC={};['p1L','p1R','p2L','p2R'].forEach(k=>{const e=E[k];PC[k]=[+e.getAttribute('x')+e.getAttribute('width')/2,+e.getAttribute('y')+e.getAttribute('height')/2];});
 const APP={
@@ -520,8 +533,11 @@ function frame(now){
   E['bodyG'+C.app].setAttribute('transform',`translate(0 ${(-br*3).toFixed(2)})`);
   E['neckG'+C.app].setAttribute('transform',`translate(0 ${(-br*2).toFixed(2)})`);
   if(C.app===1){const sw=Math.sin(t*1.1-.6)*2.2-h.a*.35-C.look.x*1.5;
-    E.tailL1.setAttribute('transform',`rotate(${(sw).toFixed(2)} 492 262)`);
-    E.tailR1.setAttribute('transform',`rotate(${(-Math.sin(t*1.1-.9)*2.2-h.a*.35-C.look.x*1.5).toFixed(2)} 786 262)`);}
+    let fl='',fr='';
+    if(C.tails){const T=C.tails;for(const k of ['L','R']){const q=T[k];q.vy+=1900*dt;q.y+=q.vy*dt;q.a+=q.va*dt;}
+      fl=`translate(0 ${T.L.y.toFixed(1)}) rotate(${T.L.a.toFixed(1)} 492 262) `;fr=`translate(0 ${T.R.y.toFixed(1)}) rotate(${T.R.a.toFixed(1)} 786 262) `;}
+    E.tailL1.setAttribute('transform',fl+`rotate(${(sw).toFixed(2)} 492 262)`);
+    E.tailR1.setAttribute('transform',fr+`rotate(${(-Math.sin(t*1.1-.9)*2.2-h.a*.35-C.look.x*1.5).toFixed(2)} 786 262)`);}
   // mouth
   const m=E[A.mouth];
   if(C.talk&&!C.smile){const o=.22+.78*Math.abs(Math.sin(t*15+Math.sin(t*5)));m.setAttribute('transform',`translate(0 ${A.mtop}) scale(1 ${o.toFixed(2)}) translate(0 ${-A.mtop})`);}
@@ -606,7 +622,29 @@ const REQUEST=()=>STEP_LINES()[S.step];
 let reqShown=false;
 function toggleRequest(){if(S.busy||S.win||S.locked||C.mode!=='desk')return;ac();sfx.blip();
   const back=lastLine;reqShown=!reqShown;const t=reqShown?REQUEST():back;fitChat(t);type($('chatS'),t,20).then(()=>{lastLine=back;});C.g.bounce=12;}
-['askChar','askChat'].forEach(id=>$(id).addEventListener('click',toggleRequest));
+['askChar','askChat'].forEach(id=>$(id).addEventListener('click',e=>{if(pinched){pinched=false;return;}toggleRequest();}));
+// pinch = press and hold on Caesar: she reacts (one of three lines, or her pigtails bleed and break)
+let pinchT=0,pinched=false,pinchDeck=[];
+const PINCH=()=>[`Don't do that.`,`I am formless. I am forever beyond your reach.`,`Does doing this make you feel better?`];
+$('askChar').addEventListener('pointerdown',()=>{clearTimeout(pinchT);pinchT=setTimeout(pinch,380);});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('askChar').addEventListener(ev,()=>clearTimeout(pinchT)));
+async function pinch(){if(S.busy||S.win||S.locked||C.mode!=='desk')return;
+  pinched=true;ac();C.g.bounce=-14;sfx.glitch();
+  // deal reactions like a shuffled deck so each shows up before any repeats (3 = pigtails, outfit 1 only)
+  if(!pinchDeck.length){pinchDeck=C.app===1?[0,1,2,3]:[0,1,2];for(let i=pinchDeck.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pinchDeck[i],pinchDeck[j]]=[pinchDeck[j],pinchDeck[i]];}}
+  let k=pinchDeck.pop();if(k===3&&(C.app!==1||C.tails))k=Math.floor(Math.random()*3);
+  S.busy=true;
+  if(k===3)await tailBreak();
+  else{C.g.twitch=.25;await sayS(PINCH()[k]);C.g.twitch=0;}
+  S.busy=false;}
+// the twin tails tear off, bleed ink and fall, then glitch back as if nothing happened
+async function tailBreak(){const h=headXf();
+  C.tails={L:{y:0,vy:-120,a:0,va:-90},R:{y:0,vy:-140,a:0,va:110},t:0};
+  E.tailWound1.setAttribute('visibility','visible');sfx.crack();$('chatS').textContent='';
+  for(const pt of [[492,262],[786,262]]){const q=charToStage(xfPoint(h,pt));for(let i=0;i<26;i++)drop(q.x,q.y,(Math.random()-.5)*700,-200-Math.random()*600,3+Math.random()*7,Math.random()<.6);}
+  await type($('chatS'),`...`,240);await wait(2600);
+  sfx.glitch();C.tails=null;E.tailWound1.setAttribute('visibility','hidden');clearFx();
+  await sayS(PINCH()[0]);}
 
 /* ---------- 1. login ---------- */
 const nameInput=$('nameInput'),enterBtn=$('enterBtn');
@@ -614,7 +652,7 @@ nameInput.addEventListener('input',()=>{enterBtn.disabled=!nameInput.value.trim(
   // a quick hop for every key typed, then back to the side-to-side bop
   const h=$('loginHead');h.classList.remove('hop');void h.offsetWidth;h.classList.add('hop');});
 $('loginHead').addEventListener('animationend',e=>{if(e.animationName==='headHop')e.target.classList.remove('hop');});
-$('loginForm').addEventListener('submit',e=>{e.preventDefault();if(S.ended){location.reload();return;}const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();startPrechat();});
+$('loginForm').addEventListener('submit',e=>{e.preventDefault();if(S.ended)return;const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();startPrechat();});
 $('loginX').addEventListener('click',()=>{const f=$('loginFrame');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');sfx.close();});
 
 /* ---------- 2. welcome ---------- */
@@ -768,19 +806,21 @@ async function poison(){
   const inv=setInterval(()=>stage.classList.toggle('invert',Math.random()<.18),140);
   await wait(1200);setNoise(.4);await wait(500);
   clearInterval(iv);clearInterval(inv);
-  await crashScreen('');
+  await crashScreen('','c4');
   resetAfterCrash(`...It's you, ${NAME}. Everything went black. Don't give me that one again.`);
 }
-async function crashScreen(text){
+async function crashScreen(text,set='crash'){
   stage.classList.remove('tear','invert');setNoise(0);
   const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();await wait(text?900:250);
   const ci=$('crashImg');ci.hidden=false;ci.classList.remove('in');void ci.offsetWidth;ci.classList.add('in');bo.hidden=true;
-  const csvg=$('crashShake'),frames=[...csvg.children];let fi=0;
+  const csvg=$('crashShake');csvg.querySelectorAll('.cset').forEach(c=>c.hidden=c.dataset.set!==set);
+  const frames=[...csvg.querySelector(`.cset[data-set="${set}"]`).children];let fi=0;
   // boil the pen lines, shake the picture and keep flipping its colours for the whole 3 seconds
   const boil=reduceMotion?0:setInterval(()=>{frames[fi].hidden=true;fi=(fi+1+Math.floor(Math.random()*4))%frames.length;frames[fi].hidden=false;},110);
-  const jolt=reduceMotion?0:setInterval(()=>{const m=Math.random()<.2?70:26;
+  const hard=set==='c4';
+  const jolt=reduceMotion?0:setInterval(()=>{const m=Math.random()<.2?(hard?120:70):(hard?44:26);
     csvg.style.transform=`translate(${(Math.random()-.5)*m}px,${(Math.random()-.5)*m}px) rotate(${(Math.random()-.5)*2.4}deg) scale(${1.05+Math.random()*.06})`;},45);
-  let flipT=0;const flip=()=>{ci.classList.toggle('inv');if(Math.random()<.4)sfx.glitch();flipT=setTimeout(flip,60+Math.random()*150);};
+  let flipT=0;const flip=()=>{ci.classList.toggle('inv');if(Math.random()<.4)sfx.glitch();flipT=setTimeout(flip,(hard?40:60)+Math.random()*(hard?110:150));};
   if(!reduceMotion)flip();
   // reset the desktop behind the image while it shows
   $('popups').innerHTML='';clearFx();restoreChar();
@@ -845,11 +885,12 @@ async function winpart(){
   E.headG1.removeAttribute('filter');E.warpMap.setAttribute('scale','0');E.grin1.setAttribute('visibility','hidden');E.mouth1.setAttribute('visibility','visible');
   C.pupS=1;restoreChar();
   end.hidden=true;$('desktop').hidden=true;$('login').hidden=false;
-  nameInput.value='';enterBtn.disabled=true;
+  $('titleDark').hidden=false;
+  nameInput.value='';nameInput.disabled=true;enterBtn.disabled=true;$('loginX').disabled=true;
   const tc=$('titleCap');tc.hidden=false;tc.textContent='';
   await wait(1100);
   await type(tc,`Hi, I'm Caesar, what's your name?`,60);
-  // the game ends here; typing a name starts it over
+  // the game ends here
 }
 // typing that hangs and stutters, as if the program were lagging
 async function lagType(el,text){el.textContent='';C.talk=true;
@@ -990,7 +1031,7 @@ function sparkle(){const A=APP[C.app];for(let i=0;i<16;i++){const s=document.cre
   $('desktop').appendChild(s);requestAnimationFrame(()=>{s.style.transform=`translate(${(Math.random()-.5)*200}px,${-80-Math.random()*160}px) scale(${.3+Math.random()}) rotate(90deg)`;s.style.opacity='0';});setTimeout(()=>s.remove(),1000);}}
 
 /* ---------- boot ---------- */
-const PRE=['background.jpg','login.png','loginbox.png','loginhead.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png','end_c2.jpg','end_c3.jpg','end_c4.jpg','end_c5.jpg','end_c6.jpg','end_c7.jpg','crash0.jpg','crash1.jpg','crash2.jpg','crash3.jpg','crash4.jpg','crash5.jpg'];
+const PRE=['background.jpg','login.png','loginbox.png','loginhead.png','panel.png','chatm.png','chats.png','upload.png','success.png','prog0.png','prog1.png','prog2.png','prog3.png','head1.png','hsmile.png','head2.png','body1.png','body2.png','neck1.png','neck2.png','tailL.png','tailR.png','win1.png','win2.png','win3.png','win4.png','win5.png','winimg.png','end_c2.jpg','end_c3.jpg','end_c4.jpg','end_c5.jpg','end_c6.jpg','end_c7.jpg','c4boil0.jpg','c4boil1.jpg','c4boil2.jpg','c4boil3.jpg','c4boil4.jpg','c4boil5.jpg','crash0.jpg','crash1.jpg','crash2.jpg','crash3.jpg','crash4.jpg','crash5.jpg'];
 let n=0;PRE.forEach(f=>{const i=new Image();i.onload=i.onerror=()=>{if(++n===PRE.length){$('loading').remove();nameInput.focus({preventScroll:true});}};i.src='assets/'+f;});
 charMode('pre');setApp(1);requestAnimationFrame(frame);
 })();
