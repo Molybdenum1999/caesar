@@ -223,6 +223,11 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #titleDark{background:#050505}
 #titleDark img{width:3200px;height:2000px;object-fit:cover;max-width:none;filter:invert(1);opacity:.1}
 #titleCap{left:600px;width:1940px;top:1665px;font-size:92px;-webkit-text-stroke:12px var(--ink)}
+#titleCap.last{left:200px;width:2800px;top:930px;font-size:110px}
+#musicBtn{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:100;width:44px;height:44px;border-radius:50%;
+  border:3px solid #e8e8e8;background:rgba(14,14,16,.6);color:#e8e8e8;font:22px/1 var(--hand);cursor:pointer}
+#musicBtn[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+#musicBtn:focus-visible{outline:3px dashed #e8e8e8;outline-offset:3px}
 #rotate{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;color:#bbb;font-family:var(--hand);font-size:15px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 @media (prefers-reduced-motion:reduce){#stage.tear #shake{animation:none}.next{animation:none}}
 </style>
@@ -311,6 +316,9 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 </div>
 </div>
 <div id="rotate" hidden>Turn your phone sideways for a bigger screen.</div>
+<!-- background music: put a track at assets/bgm.mp3; the button only appears once it loads -->
+<audio id="bgm" src="assets/bgm.mp3" loop preload="auto"></audio>
+<button id="musicBtn" type="button" aria-pressed="true" aria-label="Music on" hidden>♪</button>
 
 <!-- Caesar, assembled from the artist's separate layers (coordinates are the 3200x2000 source canvas). -->
 <template id="charTpl">
@@ -652,7 +660,21 @@ nameInput.addEventListener('input',()=>{enterBtn.disabled=!nameInput.value.trim(
   // a quick hop for every key typed, then back to the side-to-side bop
   const h=$('loginHead');h.classList.remove('hop');void h.offsetWidth;h.classList.add('hop');});
 $('loginHead').addEventListener('animationend',e=>{if(e.animationName==='headHop')e.target.classList.remove('hop');});
-$('loginForm').addEventListener('submit',e=>{e.preventDefault();if(S.ended)return;const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();startPrechat();});
+$('loginForm').addEventListener('submit',e=>{e.preventDefault();if(S.ended)return;const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();bgmStart();startPrechat();});
+
+/* ---------- background music ---------- */
+// browsers only allow sound after a click, so the music starts when the player presses ENTER
+const bgm=$('bgm'),musicBtn=$('musicBtn');let musicOn=true,bgmHeld=false;
+try{musicOn=localStorage.getItem('caesar_music')!=='off';}catch(e){}
+bgm.volume=.45;
+bgm.addEventListener('canplay',()=>{musicBtn.hidden=false;showMusic();},{once:true});
+bgm.addEventListener('error',()=>{musicBtn.hidden=true;});
+function showMusic(){musicBtn.setAttribute('aria-pressed',String(musicOn));musicBtn.setAttribute('aria-label',musicOn?'Music on':'Music off');}
+function bgmStart(){if(musicOn&&!bgmHeld)bgm.play().catch(()=>{});}
+// silence during crashes (and for the whole ending), then pick up again
+function bgmHold(on){bgmHeld=on;if(on)bgm.pause();else bgmStart();}
+musicBtn.addEventListener('click',()=>{musicOn=!musicOn;showMusic();try{localStorage.setItem('caesar_music',musicOn?'on':'off');}catch(e){}
+  if(musicOn&&$('login').hidden)bgmStart();else bgm.pause();});
 $('loginX').addEventListener('click',()=>{const f=$('loginFrame');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');sfx.close();});
 
 /* ---------- 2. welcome ---------- */
@@ -770,7 +792,7 @@ function spawnPopup(){const w=520+Math.random()*560|0,h=230+Math.random()*170|0,
 const GL='#@8!3%&¥$█▓▒░ｶｲｻﾙ?!/\\';
 const corrupt=(s,a)=>[...s].map(c=>c!==' '&&Math.random()<a?GL[Math.random()*GL.length|0]:c).join('');
 async function overload(f){
-  S.busy=true;S.locked=true;
+  S.busy=true;S.locked=true;bgmHold(true);
   await sayS(`That's... not me. No. No no no.`,26);
   charBox.classList.add('glitch');C.g.twitch=.6;C.g.hold=true;sfx.glitch();
   const base=`THAT'S NOT ME. THAT'S NOT ME. WHO AM I?`;let a=0;
@@ -787,7 +809,7 @@ async function overload(f){
 
 /* poison file: neck snaps, eyes pop */
 async function poison(){
-  S.busy=true;S.locked=true;
+  S.busy=true;S.locked=true;bgmHold(true);
   await sayS(`Hm? This one feels so cold—`,30);
   C.g.twitch=.5;C.g.hold=true;sfx.glitch();$('chatS').textContent='—';
   await wait(900);
@@ -837,7 +859,7 @@ function startBoil(){if(boilT||reduceMotion)return;BOIL_EL().forEach(e=>e.classL
   const tb=$('deskTurb');boilT=setInterval(()=>tb.setAttribute('seed',String(1+Math.floor(Math.random()*9))),120);}
 function stopBoil(){clearInterval(boilT);boilT=0;BOIL_EL().forEach(e=>e.classList.remove('boiling'));}
 async function resetAfterCrash(line){
-  startBoil();
+  startBoil();bgmHold(false);
   // progress stays where it was before the bad upload
   $('prog').src=`assets/prog${S.progress}.png`;$('uploadImg').src='assets/upload.png';
   S.locked=false;await wait(300);await sayS(line);await wait(1500);await sayS(REQUEST());S.busy=false;}
@@ -857,7 +879,7 @@ async function winpart(){
   await wait(400);
   await type(cap,`Thank you, ${NAME}, I finally remember that Ida and I was`,45);
   // ...cut off: the screen flickers, then drops to black for a split second
-  sfx.glitch();end.classList.add('flick');await wait(480);end.classList.remove('flick');
+  bgmHold(true);sfx.glitch();end.classList.add('flick');await wait(480);end.classList.remove('flick');
   const bo=$('blackout');bo.textContent='';bo.hidden=false;sfx.crack();cap.textContent='';await wait(280);bo.hidden=true;
   setSmile(false);await wait(350);
   // 2. lagging: Caesar stutters while c2.jpg flashes erratically
@@ -885,9 +907,10 @@ async function winpart(){
   E.headG1.removeAttribute('filter');E.warpMap.setAttribute('scale','0');E.grin1.setAttribute('visibility','hidden');E.mouth1.setAttribute('visibility','visible');
   C.pupS=1;restoreChar();
   end.hidden=true;$('desktop').hidden=true;$('login').hidden=false;
-  $('titleDark').hidden=false;
-  nameInput.value='';nameInput.disabled=true;enterBtn.disabled=true;$('loginX').disabled=true;
-  const tc=$('titleCap');tc.hidden=false;tc.textContent='';
+  // only the dark background (c3 barely there) and her line remain
+  const td=$('titleDark'),tc=$('titleCap');td.hidden=false;$('loginFrame').hidden=true;
+  td.appendChild(tc);tc.classList.add('last');tc.hidden=false;tc.textContent='';
+  nameInput.disabled=true;enterBtn.disabled=true;musicBtn.hidden=true;
   await wait(1100);
   await type(tc,`Hi, I'm Caesar, what's your name?`,60);
   // the game ends here
