@@ -450,10 +450,11 @@ const toStage=e=>({x:(e.clientX-OX)/SC,y:(e.clientY-OY)/SC});
 /* ---------- sound (starts after the first click) ---------- */
 let AC=null;
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC;}
-function tone(f,d,type='sine',v=.05,slide=0,at=0){const a=ac();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,f*slide),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.02);}
-function noise(d,v=.15,hp=200,at=0){const a=ac();if(!a)return;const n=Math.floor(a.sampleRate*d),b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=(Math.random()*2-1)*(1-i/n);const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='highpass';f.frequency.value=hp;const g=a.createGain();g.gain.value=v;s.connect(f).connect(g).connect(a.destination);s.start(a.currentTime+at);}
+const SFX=1.5; // sound effects sit above the music
+function tone(f,d,type='sine',v=.05,slide=0,at=0){v*=SFX;const a=ac();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,f*slide),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.02);}
+function noise(d,v=.15,hp=200,at=0){v*=SFX;const a=ac();if(!a)return;const n=Math.floor(a.sampleRate*d),b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=(Math.random()*2-1)*(1-i/n);const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='highpass';f.frequency.value=hp;const g=a.createGain();g.gain.value=v;s.connect(f).connect(g).connect(a.destination);s.start(a.currentTime+at);}
 const sfx={
-  blip(){tone(640+Math.random()*180,.045,'triangle',.018);},
+  blip(){tone(640+Math.random()*180,.05,'triangle',.045);},
   ok(){tone(660,.16,'triangle',.06);tone(990,.3,'triangle',.06,0,.12);},
   open(){tone(420,.08,'square',.02,1.6);},
   close(){tone(520,.08,'square',.02,.6);},
@@ -549,7 +550,7 @@ function frame(now){
   E.blink2.setAttribute('visibility',bl&&C.app===2?'visible':'hidden');
   if(!C.smile)E['eyes'+C.app].setAttribute('visibility',bl||g.eyes?'hidden':'visible');
   if(g.eyes)eyeStep(dt,h);
-  fxStep(dt,h);
+  fxStep(dt,h);musicLevel(dt);
   requestAnimationFrame(frame);
 }
 
@@ -655,38 +656,41 @@ $('loginHead').addEventListener('animationend',e=>{if(e.animationName==='headHop
 $('loginForm').addEventListener('submit',e=>{e.preventDefault();if(S.ended)return;const v=nameInput.value.trim();if(!v){nameInput.focus();return;}NAME=v;ac();sfx.ok();bgmStart();startPrechat();});
 
 /* ---------- background music ---------- */
-// browsers only allow sound after a click, so the music starts when the player presses ENTER
-const bgm=$('bgm'),musicBtn=$('musicBtn');let musicOn=true,bgmHeld=false;
+// browsers only allow sound after a click, so the music starts when the player presses ENTER.
+// It starts on a plain <audio> element, then moves (at the same spot) onto a decoded Web Audio copy,
+// so its speed and pitch can bend smoothly: warped during crashes, dragged down like a dying turntable in the ending.
+const bgm=$('bgm'),musicBtn=$('musicBtn');let musicOn=true;
+const BGM_VOL=.3; // kept under the typing blips and sound effects
 try{musicOn=localStorage.getItem('caesar_music')!=='off';}catch(e){}
-bgm.volume=.45;
+bgm.volume=BGM_VOL;
 bgm.addEventListener('canplay',()=>{musicBtn.hidden=false;showMusic();},{once:true});
 bgm.addEventListener('error',()=>{musicBtn.hidden=true;});
 function showMusic(){musicBtn.setAttribute('aria-pressed',String(musicOn));musicBtn.setAttribute('aria-label',musicOn?'Music on':'Music off');}
-function bgmStart(){if(musicOn&&!bgmHeld)bgm.play().catch(()=>{});}
-// silence during crashes (and for the whole ending), then pick up again
-function bgmHold(on){bgmHeld=on;if(on)bgm.pause();else bgmStart();}
-
-/* ending: the record slows down like a turntable losing power.
-   The track is decoded once, then taken over from the <audio> element at the same spot,
-   so its speed (and with it the pitch) can sink smoothly, with a woozy wobble. */
-let bgmBuf=null,bgmBufP=null,vinyl=null;
+let bgmBuf=null,bgmBufP=null,music=null,musicDone=false;
 function loadBgmBuffer(){if(bgmBufP)return bgmBufP;const a=ac();if(!a)return Promise.resolve();
-  bgmBufP=fetch('assets/bgm.mp3').then(r=>r.arrayBuffer()).then(b=>a.decodeAudioData(b)).then(buf=>{bgmBuf=buf;}).catch(()=>{});return bgmBufP;}
-function vinylStart(){const a=ac();if(vinyl||!a||!bgmBuf||!musicOn||bgm.paused)return;
+  bgmBufP=fetch('assets/bgm.mp3').then(r=>r.arrayBuffer()).then(b=>a.decodeAudioData(b)).then(buf=>{bgmBuf=buf;if(!bgm.paused)takeOver();}).catch(()=>{});return bgmBufP;}
+function takeOver(){const a=ac();if(music||!a||!bgmBuf||musicDone)return;
   const src=a.createBufferSource(),lp=a.createBiquadFilter(),g=a.createGain(),wob=a.createOscillator(),wg=a.createGain();
-  src.buffer=bgmBuf;src.loop=true;lp.type='lowpass';lp.frequency.value=18000;g.gain.value=bgm.volume;
+  src.buffer=bgmBuf;src.loop=true;lp.type='lowpass';lp.frequency.value=18000;g.gain.value=musicOn?bgm.volume:0;
   wob.frequency.value=.8;wg.gain.value=0;wob.connect(wg).connect(src.playbackRate);
-  src.connect(lp).connect(g).connect(a.destination);src.start(0,bgm.currentTime%bgmBuf.duration);wob.start();bgm.pause();
-  vinyl={src,lp,g,wob,wg};}
+  src.connect(lp).connect(g).connect(a.destination);src.start(0,(bgm.currentTime||0)%bgmBuf.duration);wob.start();bgm.pause();
+  music={src,lp,g,wob,wg,level:g.gain.value};}
+function bgmStart(){if(musicDone)return;loadBgmBuffer();if(music)return;bgm.play().catch(()=>{});}
 // glide to speed r over secs; wobble adds flutter; the sound also darkens as it slows
-function vinylRate(r,secs,wobble=0){
-  if(!vinyl){if(!bgm.paused){bgm.preservesPitch=false;bgm.webkitPreservesPitch=false;bgm.mozPreservesPitch=false;bgm.playbackRate=Math.max(.25,r);}return;} // fallback: rougher, but still drags down
-  const t=AC.currentTime,p=vinyl.src.playbackRate,f=vinyl.lp.frequency;
+function musicRate(r,secs,wobble=0){
+  if(!music){if(!bgm.paused){bgm.preservesPitch=false;bgm.webkitPreservesPitch=false;bgm.mozPreservesPitch=false;bgm.playbackRate=Math.max(.25,r);}return;} // fallback before decoding: rougher, same idea
+  const t=AC.currentTime,p=music.src.playbackRate,f=music.lp.frequency;
   p.cancelScheduledValues(t);p.setValueAtTime(p.value,t);p.exponentialRampToValueAtTime(Math.max(.04,r),t+secs);
-  f.cancelScheduledValues(t);f.setValueAtTime(f.value,t);f.exponentialRampToValueAtTime(Math.max(350,18000*r*r),t+secs);
-  vinyl.wg.gain.setTargetAtTime(wobble,t,.25);}
-function vinylStop(fade=.05){if(!vinyl){bgm.pause();bgm.playbackRate=1;return;}const v=vinyl;vinyl=null;v.g.gain.setTargetAtTime(0,AC.currentTime,fade);
-  setTimeout(()=>{try{v.src.stop();v.wob.stop();}catch(e){}},fade*8000+50);}
+  f.cancelScheduledValues(t);f.setValueAtTime(f.value,t);f.exponentialRampToValueAtTime(Math.min(18000,Math.max(350,18000*r*r)),t+secs);
+  music.wg.gain.setTargetAtTime(wobble,t,.25);}
+function musicStop(fade=.05){musicDone=true;bgm.pause();if(!music)return;const m=music;music=null;m.g.gain.setTargetAtTime(0,AC.currentTime,fade);
+  setTimeout(()=>{try{m.src.stop();m.wob.stop();}catch(e){}},fade*8000+50);}
+// level follows the on/off button and dips while Caesar is typing so every blip is heard
+function musicLevel(dt){const want=musicOn?BGM_VOL*(C.talk?.45:1):0;
+  if(music){if(Math.abs(want-music.level)>.002){music.level=want;music.g.gain.setTargetAtTime(want,AC.currentTime,.15);}}
+  else bgm.volume+=(want-bgm.volume)*Math.min(1,dt*6);}
+musicBtn.addEventListener('click',()=>{musicOn=!musicOn;showMusic();try{localStorage.setItem('caesar_music',musicOn?'on':'off');}catch(e){}
+  if(musicOn&&$('login').hidden)bgmStart();else if(!music)bgm.pause();});
 // system beep (1.wav); slowed down it becomes a flatline
 function beep(rate=1,vol=.6){const b=new Audio('assets/beep.mp3');b.volume=vol;b.preservesPitch=false;b.webkitPreservesPitch=false;b.mozPreservesPitch=false;b.playbackRate=rate;b.play().catch(()=>{});}
 const endMusic=new Audio('assets/end.mp3');endMusic.preload='auto';endMusic.volume=.6;
@@ -810,7 +814,7 @@ function spawnPopup(){const w=520+Math.random()*560|0,h=230+Math.random()*170|0,
 const GL='#@8!3%&¥$█▓▒░ｶｲｻﾙ?!/\\';
 const corrupt=(s,a)=>[...s].map(c=>c!==' '&&Math.random()<a?GL[Math.random()*GL.length|0]:c).join('');
 async function overload(f){
-  S.busy=true;S.locked=true;bgmHold(true);
+  S.busy=true;S.locked=true;musicRate(.62,1.4,.07); // the music warps and sinks as she breaks
   await sayS(`That's... not me. No. No no no.`,26);
   charBox.classList.add('glitch');C.g.twitch=.6;C.g.hold=true;sfx.glitch();
   const base=`THAT'S NOT ME. THAT'S NOT ME. WHO AM I?`;let a=0;
@@ -827,7 +831,7 @@ async function overload(f){
 
 /* poison file: neck snaps, eyes pop */
 async function poison(){
-  S.busy=true;S.locked=true;bgmHold(true);
+  S.busy=true;S.locked=true;musicRate(.5,2,.06);
   await sayS(`Hm? This one feels so cold—`,30);
   C.g.twitch=.5;C.g.hold=true;sfx.glitch();$('chatS').textContent='—';
   await wait(900);
@@ -852,6 +856,7 @@ async function poison(){
 async function crashScreen(text,set='crash'){
   stage.classList.remove('tear','invert');setNoise(0);
   const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();beep();await wait(text?900:250);
+  musicRate(set==='c4'?.3:.4,.7,.05); // crash picture: a low, groaning drag
   const ci=$('crashImg');ci.hidden=false;ci.classList.remove('in');void ci.offsetWidth;ci.classList.add('in');bo.hidden=true;
   const csvg=$('crashShake');csvg.querySelectorAll('.cset').forEach(c=>c.hidden=c.dataset.set!==set);
   const frames=[...csvg.querySelector(`.cset[data-set="${set}"]`).children];let fi=0;
@@ -875,9 +880,9 @@ let boilT=0;
 const BOIL_EL=()=>[$('deskArt'),E.charSvg,$('chatsImg'),$('files')];
 function startBoil(){if(boilT||reduceMotion)return;BOIL_EL().forEach(e=>e.classList.add('boiling'));
   const tb=$('deskTurb');boilT=setInterval(()=>tb.setAttribute('seed',String(1+Math.floor(Math.random()*9))),120);}
-function stopBoil(){clearInterval(boilT);boilT=0;BOIL_EL().forEach(e=>e.classList.remove('boiling'));}
+function stopBoil(){if(boilT)musicRate(1,1.2,0);clearInterval(boilT);boilT=0;BOIL_EL().forEach(e=>e.classList.remove('boiling'));}
 async function resetAfterCrash(line){
-  startBoil();bgmHold(false);
+  startBoil();musicRate(.95,2.2,.018); // climbs back, but stays slightly warped while the drawings boil
   // progress stays where it was before the bad upload
   $('prog').src=`assets/prog${S.progress}.png`;$('uploadImg').src='assets/upload.png';
   S.locked=false;await wait(300);await sayS(line);await wait(1500);await sayS(REQUEST());S.busy=false;}
@@ -890,7 +895,7 @@ async function winpart(){
   const end=$('ending'),cap=$('endCap');
   // 1. Caesar steps out of her window and fills the screen (c1.jpg framing), smiling (h-smile)
   setApp(1);restoreChar();
-  loadBgmBuffer().then(vinylStart);
+  loadBgmBuffer();
   charMode('end');preView({s:1,tx:DESK_DX,ty:0,clip:'none'});
   end.style.opacity=0;end.hidden=false;void end.offsetWidth;end.style.transition='opacity .7s';end.style.opacity=1;
   charBox.classList.add('zoom');void charBox.offsetWidth;preView(END_XF);setSmile(true);
@@ -899,12 +904,12 @@ async function winpart(){
   await type(cap,`Thank you, ${NAME}, I finally remember that Ida and I was`,45);
   // ...cut off: the screen flickers, then drops to black for a split second
   // the record skips as the screen flickers
-  vinylRate(.5,.06);setTimeout(()=>vinylRate(1,.2),300);
+  musicRate(.5,.06);setTimeout(()=>musicRate(1,.2),300);
   sfx.glitch();end.classList.add('flick');await wait(480);end.classList.remove('flick');
   const bo=$('blackout');bo.textContent='';bo.hidden=false;sfx.crack();cap.textContent='';await wait(280);bo.hidden=true;
   setSmile(false);await wait(350);
   // 2. lagging: Caesar stutters while c2.jpg flashes erratically
-  C.freeze=true;let lagOn=true;vinylRate(.94,.6,.05); // unsteady, like a warped record
+  C.freeze=true;let lagOn=true;musicRate(.94,.6,.05); // unsteady, like a warped record
   const f1=$('endFlash'),f2=$('endFlash2');
   (async()=>{while(lagOn){const show=Math.random()<.6;f1.hidden=!show;
       if(show){f1.style.transform=`translate(${(Math.random()-.5)*160}px,${(Math.random()-.5)*90}px) scale(${1+Math.random()*.15})`;
@@ -917,13 +922,13 @@ async function winpart(){
   await wait(500);
   // 3. "Thank you?" her face warps into a grimace
   E.mouth1.setAttribute('visibility','hidden');E.grin1.setAttribute('visibility','visible');C.pupS=.32;
-  E.headG1.setAttribute('filter','url(#warp)');C.g.twitch=.35;C.g.hold=true;sfx.drone(3.5);vinylRate(.78,2.4,.03); // starting to sag
+  E.headG1.setAttribute('filter','url(#warp)');C.g.twitch=.35;C.g.hold=true;sfx.drone(3.5);musicRate(.78,2.4,.03); // starting to sag
   let ws=0;const warpT=setInterval(()=>{ws=Math.min(30,ws+2);E.warpMap.setAttribute('scale',ws.toFixed(1));E.warpTurb.setAttribute('seed',String(1+Math.floor(Math.random()*9)));},90);
   await type(cap,`Thank you?`,110);
   await wait(1500);
   // 4. the new, worse crash
   clearInterval(warpT);cap.textContent='';
-  await horror();vinylStop();bgmHold(true);
+  await horror();musicStop();
   // 5. back to the title page as if nothing happened
   E.headG1.removeAttribute('filter');E.warpMap.setAttribute('scale','0');E.grin1.setAttribute('visibility','hidden');E.mouth1.setAttribute('visibility','visible');
   C.pupS=1;restoreChar();
@@ -962,7 +967,7 @@ function horror(){
   const words=n=>{x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=8;for(let i=0;i<n;i++){x.font=`${40+Math.random()*120|0}px DotGothic16, monospace`;
     const w=pick(['THANK YOU','THANK YOU','thank you?','HELP ME','WHO AM I','IDA','IDA','IDA',`${NAME}`,'MEMORY NOT FOUND','I WAS']);const px=Math.random()*W,py=Math.random()*H;x.strokeText(w,px,py);x.fillText(w,px,py);}};
   return new Promise(res=>{const t0=performance.now();let cur='c6',dbl=null,next=0,punch=1,inv=false,ox=0,oy=0,beatAt=0,screamed=false;
-    sfx.scream(.6,.08);vinylRate(.24,1.1,.025); // the turntable loses power: everything drags down
+    sfx.scream(.6,.08);musicRate(.24,1.1,.025); // the turntable loses power: everything drags down
     let braked=false,stopped=false;
     (function step(now){const t=(now-t0)/1000;x.globalCompositeOperation='source-over';x.fillStyle='#000';x.fillRect(0,0,W,H);
       let s=1,fx=.5,fy=.5,sl=0,na=0,wd=0,shake=0;
@@ -977,16 +982,16 @@ function horror(){
         if(dbl){x.globalCompositeOperation='difference';draw(HI[dbl],1.1,.5,.5,-ox,-oy);x.globalCompositeOperation='source-over';}
         sl=7;na=.14;wd=Math.random()<.5?3:0;shake=22;if(inv)invert();}
       else if(t<6){ // silence... slow push into the bleeding eye (c7), heartbeat
-        const k=(t-4)/2;s=1+k*k*3.2;fx=.74;fy=.37;if(!braked){braked=true;vinylRate(.16,1.8,.012);}
+        const k=(t-4)/2;s=1+k*k*3.2;fx=.74;fy=.37;if(!braked){braked=true;musicRate(.16,1.8,.012);}
         draw(HI.c7,s,fx,fy);na=.05+k*.12;shake=k*8;
         if(t>beatAt){sfx.beat();beatAt=t+.75-k*.4;}
         if(Math.random()<.04)invert();}
       else if(t<6.35){ // jump scare
-        if(!screamed){screamed=true;sfx.scream(1.6,.2);sfx.crack();vinylRate(.13,.35,.02);}
+        if(!screamed){screamed=true;sfx.scream(1.6,.2);sfx.crack();musicRate(.13,.35,.02);}
         draw(HI.c3,1.35+(t-6)*1.5,.25,.42);if(Math.floor(t*30)%2)invert();sl=10;shake=40;}
       else if(t<7.8){ // falling into c4, strobing, the noise swallows everything
         const k=(t-6.35)/1.45;draw(HI.c4,1+k*2.4,.62,.45);if(Math.floor(t*16)%2)invert();sl=9;na=.2+k*.75;wd=2;shake=26;}
-      else if(t<9.9){if(!stopped){stopped=true;vinylStop();beep(.5,.7);}x.fillStyle='#000';x.fillRect(0,0,W,H);} // dead air, then a slow flatline beep
+      else if(t<9.9){if(!stopped){stopped=true;musicStop();beep(.5,.7);}x.fillStyle='#000';x.fillRect(0,0,W,H);} // dead air, then a slow flatline beep
       else{cv.hidden=true;cv.style.transform='';res();return;}
       slices(sl);if(wd)words(wd);noiseOver(na);
       cv.style.transform=shake?`translate(${(Math.random()-.5)*shake*2}px,${(Math.random()-.5)*shake*2}px)`:'';
