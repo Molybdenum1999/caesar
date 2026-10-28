@@ -665,6 +665,31 @@ function showMusic(){musicBtn.setAttribute('aria-pressed',String(musicOn));music
 function bgmStart(){if(musicOn&&!bgmHeld)bgm.play().catch(()=>{});}
 // silence during crashes (and for the whole ending), then pick up again
 function bgmHold(on){bgmHeld=on;if(on)bgm.pause();else bgmStart();}
+
+/* ending: the record slows down like a turntable losing power.
+   The track is decoded once, then taken over from the <audio> element at the same spot,
+   so its speed (and with it the pitch) can sink smoothly, with a woozy wobble. */
+let bgmBuf=null,bgmBufP=null,vinyl=null;
+function loadBgmBuffer(){if(bgmBufP)return bgmBufP;const a=ac();if(!a)return Promise.resolve();
+  bgmBufP=fetch('assets/bgm.mp3').then(r=>r.arrayBuffer()).then(b=>a.decodeAudioData(b)).then(buf=>{bgmBuf=buf;}).catch(()=>{});return bgmBufP;}
+function vinylStart(){const a=ac();if(vinyl||!a||!bgmBuf||!musicOn||bgm.paused)return;
+  const src=a.createBufferSource(),lp=a.createBiquadFilter(),g=a.createGain(),wob=a.createOscillator(),wg=a.createGain();
+  src.buffer=bgmBuf;src.loop=true;lp.type='lowpass';lp.frequency.value=18000;g.gain.value=bgm.volume;
+  wob.frequency.value=.8;wg.gain.value=0;wob.connect(wg).connect(src.playbackRate);
+  src.connect(lp).connect(g).connect(a.destination);src.start(0,bgm.currentTime%bgmBuf.duration);wob.start();bgm.pause();
+  vinyl={src,lp,g,wob,wg};}
+// glide to speed r over secs; wobble adds flutter; the sound also darkens as it slows
+function vinylRate(r,secs,wobble=0){
+  if(!vinyl){if(!bgm.paused){bgm.preservesPitch=false;bgm.webkitPreservesPitch=false;bgm.mozPreservesPitch=false;bgm.playbackRate=Math.max(.25,r);}return;} // fallback: rougher, but still drags down
+  const t=AC.currentTime,p=vinyl.src.playbackRate,f=vinyl.lp.frequency;
+  p.cancelScheduledValues(t);p.setValueAtTime(p.value,t);p.exponentialRampToValueAtTime(Math.max(.04,r),t+secs);
+  f.cancelScheduledValues(t);f.setValueAtTime(f.value,t);f.exponentialRampToValueAtTime(Math.max(350,18000*r*r),t+secs);
+  vinyl.wg.gain.setTargetAtTime(wobble,t,.25);}
+function vinylStop(fade=.05){if(!vinyl){bgm.pause();bgm.playbackRate=1;return;}const v=vinyl;vinyl=null;v.g.gain.setTargetAtTime(0,AC.currentTime,fade);
+  setTimeout(()=>{try{v.src.stop();v.wob.stop();}catch(e){}},fade*8000+50);}
+// system beep (1.wav); slowed down it becomes a flatline
+function beep(rate=1,vol=.6){const b=new Audio('assets/beep.mp3');b.volume=vol;b.preservesPitch=false;b.webkitPreservesPitch=false;b.mozPreservesPitch=false;b.playbackRate=rate;b.play().catch(()=>{});}
+const endMusic=new Audio('assets/end.mp3');endMusic.preload='auto';endMusic.volume=.6;
 musicBtn.addEventListener('click',()=>{musicOn=!musicOn;showMusic();try{localStorage.setItem('caesar_music',musicOn?'on':'off');}catch(e){}
   if(musicOn&&$('login').hidden)bgmStart();else bgm.pause();});
 $('loginX').addEventListener('click',()=>{const f=$('loginFrame');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');sfx.close();});
@@ -756,6 +781,7 @@ async function upload(f){
 }
 // step 3: no more uploads; Caesar moves to the middle of her window and waits for a typed name
 async function askName(){
+  loadBgmBuffer();
   $('uploadBox').classList.add('gone');$('prog').classList.add('gone');
   E.charSvg.classList.add('slide');DESK_DX=358;E.charSvg.style.transform=`translate(${DESK_DX-196}px,-141px)`;
   $('askChar').style.width='1604px';
@@ -825,7 +851,7 @@ async function poison(){
 }
 async function crashScreen(text,set='crash'){
   stage.classList.remove('tear','invert');setNoise(0);
-  const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();await wait(text?900:250);
+  const bo=$('blackout');bo.textContent=text;bo.hidden=false;sfx.crack();beep();await wait(text?900:250);
   const ci=$('crashImg');ci.hidden=false;ci.classList.remove('in');void ci.offsetWidth;ci.classList.add('in');bo.hidden=true;
   const csvg=$('crashShake');csvg.querySelectorAll('.cset').forEach(c=>c.hidden=c.dataset.set!==set);
   const frames=[...csvg.querySelector(`.cset[data-set="${set}"]`).children];let fi=0;
@@ -864,6 +890,7 @@ async function winpart(){
   const end=$('ending'),cap=$('endCap');
   // 1. Caesar steps out of her window and fills the screen (c1.jpg framing), smiling (h-smile)
   setApp(1);restoreChar();
+  loadBgmBuffer().then(vinylStart);
   charMode('end');preView({s:1,tx:DESK_DX,ty:0,clip:'none'});
   end.style.opacity=0;end.hidden=false;void end.offsetWidth;end.style.transition='opacity .7s';end.style.opacity=1;
   charBox.classList.add('zoom');void charBox.offsetWidth;preView(END_XF);setSmile(true);
@@ -871,11 +898,13 @@ async function winpart(){
   await wait(400);
   await type(cap,`Thank you, ${NAME}, I finally remember that Ida and I was`,45);
   // ...cut off: the screen flickers, then drops to black for a split second
-  bgmHold(true);sfx.glitch();end.classList.add('flick');await wait(480);end.classList.remove('flick');
+  // the record skips as the screen flickers
+  vinylRate(.5,.06);setTimeout(()=>vinylRate(1,.2),300);
+  sfx.glitch();end.classList.add('flick');await wait(480);end.classList.remove('flick');
   const bo=$('blackout');bo.textContent='';bo.hidden=false;sfx.crack();cap.textContent='';await wait(280);bo.hidden=true;
   setSmile(false);await wait(350);
   // 2. lagging: Caesar stutters while c2.jpg flashes erratically
-  C.freeze=true;let lagOn=true;
+  C.freeze=true;let lagOn=true;vinylRate(.94,.6,.05); // unsteady, like a warped record
   const f1=$('endFlash'),f2=$('endFlash2');
   (async()=>{while(lagOn){const show=Math.random()<.6;f1.hidden=!show;
       if(show){f1.style.transform=`translate(${(Math.random()-.5)*160}px,${(Math.random()-.5)*90}px) scale(${1+Math.random()*.15})`;
@@ -888,13 +917,13 @@ async function winpart(){
   await wait(500);
   // 3. "Thank you?" her face warps into a grimace
   E.mouth1.setAttribute('visibility','hidden');E.grin1.setAttribute('visibility','visible');C.pupS=.32;
-  E.headG1.setAttribute('filter','url(#warp)');C.g.twitch=.35;C.g.hold=true;sfx.drone(3.5);
+  E.headG1.setAttribute('filter','url(#warp)');C.g.twitch=.35;C.g.hold=true;sfx.drone(3.5);vinylRate(.78,2.4,.03); // starting to sag
   let ws=0;const warpT=setInterval(()=>{ws=Math.min(30,ws+2);E.warpMap.setAttribute('scale',ws.toFixed(1));E.warpTurb.setAttribute('seed',String(1+Math.floor(Math.random()*9)));},90);
   await type(cap,`Thank you?`,110);
   await wait(1500);
   // 4. the new, worse crash
   clearInterval(warpT);cap.textContent='';
-  await horror();
+  await horror();vinylStop();bgmHold(true);
   // 5. back to the title page as if nothing happened
   E.headG1.removeAttribute('filter');E.warpMap.setAttribute('scale','0');E.grin1.setAttribute('visibility','hidden');E.mouth1.setAttribute('visibility','visible');
   C.pupS=1;restoreChar();
@@ -904,6 +933,7 @@ async function winpart(){
   td.appendChild(tc);tc.classList.add('last');tc.hidden=false;tc.textContent='';
   nameInput.disabled=true;enterBtn.disabled=true;musicBtn.hidden=true;
   await wait(1100);
+  if(musicOn){endMusic.currentTime=0;endMusic.play().catch(()=>{});}
   await type(tc,`Hi, I'm Caesar, what's your name?`,60);
   // the game ends here
 }
@@ -932,7 +962,8 @@ function horror(){
   const words=n=>{x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=8;for(let i=0;i<n;i++){x.font=`${40+Math.random()*120|0}px DotGothic16, monospace`;
     const w=pick(['THANK YOU','THANK YOU','thank you?','HELP ME','WHO AM I','IDA','IDA','IDA',`${NAME}`,'MEMORY NOT FOUND','I WAS']);const px=Math.random()*W,py=Math.random()*H;x.strokeText(w,px,py);x.fillText(w,px,py);}};
   return new Promise(res=>{const t0=performance.now();let cur='c6',dbl=null,next=0,punch=1,inv=false,ox=0,oy=0,beatAt=0,screamed=false;
-    sfx.scream(.6,.08);
+    sfx.scream(.6,.08);vinylRate(.24,1.1,.025); // the turntable loses power: everything drags down
+    let braked=false,stopped=false;
     (function step(now){const t=(now-t0)/1000;x.globalCompositeOperation='source-over';x.fillStyle='#000';x.fillRect(0,0,W,H);
       let s=1,fx=.5,fy=.5,sl=0,na=0,wd=0,shake=0;
       if(t<1.3){ // the memory (c6) keeps tearing into c2
@@ -946,16 +977,16 @@ function horror(){
         if(dbl){x.globalCompositeOperation='difference';draw(HI[dbl],1.1,.5,.5,-ox,-oy);x.globalCompositeOperation='source-over';}
         sl=7;na=.14;wd=Math.random()<.5?3:0;shake=22;if(inv)invert();}
       else if(t<6){ // silence... slow push into the bleeding eye (c7), heartbeat
-        const k=(t-4)/2;s=1+k*k*3.2;fx=.74;fy=.37;
+        const k=(t-4)/2;s=1+k*k*3.2;fx=.74;fy=.37;if(!braked){braked=true;vinylRate(.16,1.8,.012);}
         draw(HI.c7,s,fx,fy);na=.05+k*.12;shake=k*8;
         if(t>beatAt){sfx.beat();beatAt=t+.75-k*.4;}
         if(Math.random()<.04)invert();}
       else if(t<6.35){ // jump scare
-        if(!screamed){screamed=true;sfx.scream(1.6,.2);sfx.crack();}
+        if(!screamed){screamed=true;sfx.scream(1.6,.2);sfx.crack();vinylRate(.13,.35,.02);}
         draw(HI.c3,1.35+(t-6)*1.5,.25,.42);if(Math.floor(t*30)%2)invert();sl=10;shake=40;}
       else if(t<7.8){ // falling into c4, strobing, the noise swallows everything
         const k=(t-6.35)/1.45;draw(HI.c4,1+k*2.4,.62,.45);if(Math.floor(t*16)%2)invert();sl=9;na=.2+k*.75;wd=2;shake=26;}
-      else if(t<8.6){x.fillStyle='#000';x.fillRect(0,0,W,H);} // dead air
+      else if(t<9.9){if(!stopped){stopped=true;vinylStop();beep(.5,.7);}x.fillStyle='#000';x.fillRect(0,0,W,H);} // dead air, then a slow flatline beep
       else{cv.hidden=true;cv.style.transform='';res();return;}
       slices(sl);if(wd)words(wd);noiseOver(na);
       cv.style.transform=shake?`translate(${(Math.random()-.5)*shake*2}px,${(Math.random()-.5)*shake*2}px)`:'';
