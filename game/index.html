@@ -86,7 +86,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #preHint{position:absolute;left:1795px;top:1668px;font-size:44px;color:var(--graphite)}
 
 /* ---------- desktop ---------- */
-#chatS{position:absolute;left:730px;top:1296px;width:1040px;height:140px;font-size:50px;line-height:1.36;overflow:hidden}
+#chatS{position:absolute;left:730px;top:1292px;width:1040px;height:152px;font-size:50px;line-height:1.36;overflow:hidden}
 /* click Caesar or her chat box to see the upload request again */
 .ask{position:absolute;border:0;padding:0;background:transparent;cursor:pointer}
 .ask:focus-visible{outline:6px dashed var(--paper);outline-offset:-10px}
@@ -109,12 +109,12 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
 #uploadBox.gone,#prog.gone{opacity:0;pointer-events:none}
 #charSvg.slide{transition:transform 1.2s cubic-bezier(.5,0,.2,1)}
 /* step 3: Caesar asks for her maker's name; answered here instead of by upload */
-#answerForm{position:absolute;left:720px;top:1486px;width:1170px;height:110px;animation:pop .35s cubic-bezier(.3,1.4,.6,1)}
+#answerForm{position:absolute;left:543px;top:1010px;width:910px;height:110px;animation:pop .35s cubic-bezier(.3,1.4,.6,1)}
 #answerForm[hidden]{display:none}
-#answerBox{left:0;top:0;width:920px;height:110px;background:var(--paper)}
-#answerInput{position:absolute;left:18px;top:6px;width:884px;height:98px;border:0;outline:0;background:transparent;font-family:var(--hand);font-size:62px;color:var(--ink);text-align:center;letter-spacing:.06em;caret-color:var(--ink)}
+#answerBox{left:0;top:0;width:680px;height:110px;background:var(--paper)}
+#answerInput{position:absolute;left:16px;top:6px;width:648px;height:98px;border:0;outline:0;background:transparent;font-family:var(--hand);font-size:62px;color:var(--ink);text-align:center;letter-spacing:.06em;caret-color:var(--ink)}
 #answerInput::placeholder{color:#b9b9bc;font-size:50px}
-#answerBtn{position:absolute;left:950px;top:7px;width:220px;height:96px;border:0;background:transparent;cursor:pointer;padding:0;font-family:var(--hand);font-size:52px;color:var(--ink);letter-spacing:.1em;transition:transform .15s}
+#answerBtn{position:absolute;left:700px;top:7px;width:210px;height:96px;border:0;background:transparent;cursor:pointer;padding:0;font-family:var(--hand);font-size:52px;color:var(--ink);letter-spacing:.1em;transition:transform .15s}
 #answerBtn svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 #answerBtn span{position:relative}
 #answerBtn:hover,#answerBtn:focus-visible{transform:scale(1.07) rotate(-1deg);outline:none}
@@ -255,7 +255,7 @@ img.sprite{position:absolute;max-width:none;pointer-events:none;-webkit-user-dra
     <form id="answerForm" autocomplete="off" hidden>
       <img class="sprite" id="answerBox" src="assets/loginbox.png" alt="">
       <input id="answerInput" maxlength="20" placeholder="type a name" aria-label="Who made Caesar?" spellcheck="false">
-      <button id="answerBtn" type="submit"><svg data-rough="220,96,27,6" aria-hidden="true"></svg><span>ENTER</span></button>
+      <button id="answerBtn" type="submit"><svg data-rough="210,96,27,6" aria-hidden="true"></svg><span>ENTER</span></button>
     </form>
     <div id="files"></div>
     <div id="dim"></div>
@@ -541,12 +541,15 @@ async function type(el,text,speed=30){const my=++sayToken;C.talk=true;skip=false
   for(let i=0;i<text.length;i++){if(my!==sayToken)return false;if(skip){el.textContent=text;break;}el.textContent+=text[i];if(i%2===0&&text[i]!==' ')sfx.blip();await wait(text[i]===','||text[i]==='.'?speed*5:speed);}
   if(my===sayToken)C.talk=false;return true;}
 let lastLine='';
-function sayS(text,speed){lastLine=text;reqShown=false;return type($('chatS'),text,speed);}
+// shrink the chat text until the whole line fits in the box (50px down to 30px)
+function fitChat(text){const el=$('chatS');let fs=50;el.style.fontSize=fs+'px';el.textContent=text;
+  while(el.scrollHeight>el.clientHeight+1&&fs>30){fs-=2;el.style.fontSize=fs+'px';}el.textContent='';}
+function sayS(text,speed){lastLine=text;reqShown=false;fitChat(text);return type($('chatS'),text,speed);}
 // Caesar / chat box toggle between her upload request and what she said last
 const REQUEST=()=>STEP_LINES()[S.step];
 let reqShown=false;
 function toggleRequest(){if(S.busy||S.win||S.locked||C.mode!=='desk')return;ac();sfx.blip();
-  const back=lastLine;reqShown=!reqShown;type($('chatS'),reqShown?REQUEST():back,20).then(()=>{lastLine=back;});C.g.bounce=12;}
+  const back=lastLine;reqShown=!reqShown;const t=reqShown?REQUEST():back;fitChat(t);type($('chatS'),t,20).then(()=>{lastLine=back;});C.g.bounce=12;}
 ['askChar','askChat'].forEach(id=>$(id).addEventListener('click',toggleRequest));
 
 /* ---------- 1. login ---------- */
